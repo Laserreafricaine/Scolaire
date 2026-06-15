@@ -35,19 +35,35 @@
         </div>
       </div>
       <div class="children-grid" id="childrenGrid"></div>
-      <section class="panel family-overview">
+      <section class="panel family-agenda" id="familyAgendaSection">
         <div class="panel-heading">
-          <div><p class="eyebrow">Toute la famille</p><h2>À ne pas oublier</h2></div>
-          <span class="alert-count" id="familyAlertCount">0 alerte</span>
+          <div><p class="eyebrow">Tous les enfants</p><h2>Agenda familial</h2></div>
+          <span class="family-agenda-count" id="familyAgendaCount"></span>
         </div>
-        <div id="familyAlerts"></div>
+        <div class="view-switch" id="familyViewSwitch">
+          <button data-family-calendar-view="day" type="button">Jour</button>
+          <button data-family-calendar-view="week" type="button">Semaine</button>
+          <button data-family-calendar-view="month" type="button">Mois</button>
+          <button data-family-calendar-view="gantt" type="button">Gantt</button>
+        </div>
+        <div class="calendar-toolbar">
+          <button class="calendar-arrow" id="familyPreviousPeriodButton" type="button" aria-label="Période précédente">‹</button>
+          <div><strong id="familyPeriodLabel"></strong><button class="today-button" id="familyTodayButton" type="button">Aujourd’hui</button></div>
+          <button class="calendar-arrow" id="familyNextPeriodButton" type="button" aria-label="Période suivante">›</button>
+        </div>
+        <div class="calendar" id="familyCalendar"></div>
+        <div class="filter-row" id="familyFilterRow"></div>
+        <div class="event-list-head">
+          <h3>Éléments de la famille</h3>
+          <span id="familyListCount"></span>
+        </div>
+        <div class="event-list" id="familyAgendaList"></div>
       </section>
     </section>
 
     <section id="childView" class="view" hidden>
       <button class="back-button" id="backHomeButton" type="button">‹ Tous les enfants</button>
       <section class="profile-banner" id="profileBanner"></section>
-      <section class="school-cards" id="schoolCards" aria-label="Catégories scolaires"></section>
 
       <section class="panel agenda" id="agendaSection">
         <div class="panel-heading">
@@ -66,6 +82,11 @@
           <button class="calendar-arrow" id="nextPeriodButton" type="button" aria-label="Période suivante">›</button>
         </div>
         <div class="calendar" id="calendar"></div>
+      </section>
+
+      <section class="school-cards" id="schoolCards" aria-label="Catégories scolaires"></section>
+
+      <section class="panel agenda-list-panel" id="agendaListSection">
         <div class="filter-row" id="filterRow"></div>
         <div class="event-list-head">
           <h3>Éléments de la période</h3>

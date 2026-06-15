@@ -106,6 +106,10 @@ let state = {
   filter: "all",
   focusDate: toISODate(new Date()),
   selectedDate: null,
+  familyCalendarView: "week",
+  familyFilter: "all",
+  familyFocusDate: toISODate(new Date()),
+  familySelectedDate: null,
   pendingConfirm: null,
   pendingAttachment: null,
   pendingAvatar: null
@@ -300,22 +304,16 @@ function renderHome() {
     }).join("");
   }
   $$("[data-open-child]", grid).forEach(button => button.addEventListener("click", () => openChild(button.dataset.openChild)));
-  const alerts = getAlerts();
-  $("#familyAlertCount").textContent = `${alerts.length} alerte${alerts.length > 1 ? "s" : ""}`;
-  $("#familyAlerts").innerHTML = alerts.length ? alerts.slice(0, 8).map(item => {
-    const child = data.children.find(entry => entry.id === item.childId);
-    const alert = getAlert(item);
-    return `<button class="family-alert ${alert.level === "urgent" ? "urgent" : ""}" data-edit-item="${item.id}" type="button">
-      <span class="family-alert-date"><b>${fromISO(item.date).getDate()}</b><small>${formatDate(item.date, { month: "short" }).toUpperCase()}</small></span>
-      <span><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(child?.name || "")} · ${escapeHTML(alert.text)}</small></span>
-    </button>`;
-  }).join("") : `<div class="empty-state"><strong>Aucune alerte</strong>Tout est à jour pour le moment.</div>`;
-  $$("[data-edit-item]", $("#familyAlerts")).forEach(button => button.addEventListener("click", () => editItemFromAnywhere(button.dataset.editItem)));
+  renderFamilyAgenda();
 }
 
 function openChild(id) {
   state.childId = id;
   state.selectedDate = null;
+  $("#categorySection").hidden = true;
+  $("#agendaSection").hidden = false;
+  $("#schoolCards").hidden = false;
+  $("#agendaListSection").hidden = false;
   showView("child");
 }
 
@@ -343,6 +341,8 @@ function renderChild() {
 function openCategory(category, itemId = null) {
   state.category = category;
   $("#agendaSection").hidden = true;
+  $("#schoolCards").hidden = true;
+  $("#agendaListSection").hidden = true;
   $("#categorySection").hidden = false;
   renderChild();
   if (itemId) fillItemForm(data.items.find(item => item.id === itemId));
@@ -361,6 +361,8 @@ function showAgenda() {
   }
   $("#categorySection").hidden = true;
   $("#agendaSection").hidden = false;
+  $("#schoolCards").hidden = false;
+  $("#agendaListSection").hidden = false;
   showView("child");
   setTimeout(() => $("#agendaSection").scrollIntoView({ behavior: "smooth", block: "start" }), 0);
 }
@@ -407,6 +409,110 @@ function renderAgenda() {
   }));
   renderFilters();
   renderAgendaList(start, end);
+}
+
+function renderFamilyAgenda() {
+  $$("[data-family-calendar-view]").forEach(button => button.classList.toggle("active", button.dataset.familyCalendarView === state.familyCalendarView));
+  const focus = fromISO(state.familyFocusDate);
+  let start;
+  let end;
+  if (state.familyCalendarView === "day") {
+    start = focus;
+    end = focus;
+    $("#familyPeriodLabel").textContent = formatDate(focus, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    $("#familyCalendar").className = "calendar day-calendar";
+    $("#familyCalendar").innerHTML = `<button class="day-calendar-button" data-family-calendar-date="${toISODate(focus)}" type="button"><strong>${focus.getDate()}</strong><span>${formatDate(focus, { weekday: "long", month: "long" })}</span><small>Voir cette journée</small></button>`;
+  } else if (state.familyCalendarView === "week") {
+    start = startOfWeek(focus);
+    end = addDays(start, 6);
+    $("#familyPeriodLabel").textContent = `${formatDate(start, { day: "numeric", month: "short" })} – ${formatDate(end, { day: "numeric", month: "short", year: "numeric" })}`;
+    $("#familyCalendar").className = "calendar week-calendar";
+    $("#familyCalendar").innerHTML = Array.from({ length: 7 }, (_, index) => familyCalendarDayHTML(addDays(start, index))).join("");
+  } else if (state.familyCalendarView === "month") {
+    start = new Date(focus.getFullYear(), focus.getMonth(), 1);
+    end = endOfMonth(focus);
+    const gridStart = startOfWeek(start);
+    $("#familyPeriodLabel").textContent = formatDate(focus, { month: "long", year: "numeric" });
+    $("#familyCalendar").className = "calendar month-calendar";
+    $("#familyCalendar").innerHTML = `<div class="month-weekdays"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="month-grid">${Array.from({ length: 42 }, (_, index) => familyCalendarDayHTML(addDays(gridStart, index), true, focus.getMonth())).join("")}</div>`;
+  } else {
+    start = startOfWeek(focus);
+    end = addDays(start, 6);
+    $("#familyPeriodLabel").textContent = `${formatDate(start, { day: "numeric", month: "short" })} – ${formatDate(end, { day: "numeric", month: "short", year: "numeric" })}`;
+    renderFamilyGantt(start, end);
+  }
+  $$("[data-family-calendar-date]", $("#familyCalendar")).forEach(button => button.addEventListener("click", () => {
+    state.familySelectedDate = button.dataset.familyCalendarDate;
+    state.familyFocusDate = button.dataset.familyCalendarDate;
+    renderFamilyAgenda();
+  }));
+  $$("[data-family-gantt-item]", $("#familyCalendar")).forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    editItemFromAnywhere(button.dataset.familyGanttItem);
+  }));
+  renderFamilyFilters();
+  renderFamilyAgendaList(start, end);
+}
+
+function familyCalendarDayHTML(date, monthMode = false, activeMonth = null) {
+  const iso = toISODate(date);
+  const events = data.items.filter(item => item.date === iso);
+  const selected = state.familySelectedDate === iso || (!state.familySelectedDate && iso === state.familyFocusDate);
+  const outside = monthMode && date.getMonth() !== activeMonth;
+  const dots = events.slice(0, 6).map(item => `<i style="--dot:${CATEGORIES[item.category].color}"></i>`).join("");
+  if (monthMode) return `<button class="month-day ${selected ? "selected" : ""} ${outside ? "outside" : ""}" data-family-calendar-date="${iso}" type="button">${date.getDate()}<span class="day-dots">${dots}</span></button>`;
+  return `<button class="calendar-day ${selected ? "selected" : ""}" data-family-calendar-date="${iso}" type="button"><small>${formatDate(date, { weekday: "short" })}</small><strong>${date.getDate()}</strong><span class="day-dots">${dots}</span></button>`;
+}
+
+function renderFamilyGantt(start, end) {
+  const items = data.items
+    .filter(item => item.date && item.date >= toISODate(start) && item.date <= toISODate(end))
+    .filter(item => state.familyFilter === "all" || item.category === state.familyFilter)
+    .sort(sortItems);
+  const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
+  const rows = items.length ? items.map(item => {
+    const child = data.children.find(entry => entry.id === item.childId);
+    const dayIndex = Math.max(0, Math.round((fromISO(item.date) - start) / 86400000));
+    const category = CATEGORIES[item.category];
+    return `<div class="gantt-row">
+      <span class="gantt-label"><b>${escapeHTML(child?.name || "")}</b><small>${escapeHTML(itemTitle(item))}</small></span>
+      ${days.map(date => `<button class="gantt-cell ${toISODate(date) === toISODate(new Date()) ? "today" : ""}" data-family-calendar-date="${toISODate(date)}" type="button"></button>`).join("")}
+      <button class="gantt-bar" data-family-gantt-item="${item.id}" style="--event:${category.color};left:${138 + dayIndex * 62 + 3}px;width:56px" type="button">${category.icon} ${escapeHTML(child?.name || "")}</button>
+    </div>`;
+  }).join("") : `<div class="gantt-row"><span class="gantt-label">Aucun élément</span>${days.map(date => `<button class="gantt-cell" data-family-calendar-date="${toISODate(date)}" type="button"></button>`).join("")}</div>`;
+  $("#familyCalendar").className = "calendar gantt-calendar";
+  $("#familyCalendar").innerHTML = `<div class="gantt-board"><div class="gantt-head"><span>Enfant · élément</span>${days.map(date => `<span>${formatDate(date, { weekday: "short" })}<br>${date.getDate()}</span>`).join("")}</div>${rows}</div>`;
+}
+
+function renderFamilyFilters() {
+  const filters = [["all", "Tous"], ...Object.entries(CATEGORIES).map(([key, category]) => [key, category.short])];
+  $("#familyFilterRow").innerHTML = filters.map(([key, label]) => `<button class="${state.familyFilter === key ? "active" : ""}" data-family-filter="${key}" type="button">${label}</button>`).join("");
+  $$("[data-family-filter]", $("#familyFilterRow")).forEach(button => button.addEventListener("click", () => {
+    state.familyFilter = button.dataset.familyFilter;
+    renderFamilyAgenda();
+  }));
+}
+
+function renderFamilyAgendaList(periodStart, periodEnd) {
+  const startISO = toISODate(periodStart);
+  const endISO = toISODate(periodEnd);
+  const items = data.items
+    .filter(item => item.date && (state.familySelectedDate ? item.date === state.familySelectedDate : item.date >= startISO && item.date <= endISO))
+    .filter(item => state.familyFilter === "all" || item.category === state.familyFilter)
+    .sort(sortItems);
+  $("#familyAgendaCount").textContent = `${items.length} élément${items.length > 1 ? "s" : ""}`;
+  $("#familyListCount").textContent = `${items.length} élément${items.length > 1 ? "s" : ""}`;
+  $("#familyAgendaList").innerHTML = items.length ? items.map(item => {
+    const child = data.children.find(entry => entry.id === item.childId);
+    const category = CATEGORIES[item.category];
+    const alert = getAlert(item);
+    return `<button class="event ${isDone(item) ? "done" : ""} ${alert?.level === "urgent" ? "urgent-event" : ""}" style="--event:${category.color}" data-family-item="${item.id}" type="button">
+      <span class="event-date"><b>${fromISO(item.date).getDate()}</b><small>${formatDate(item.date, { month: "short" }).toUpperCase()}</small></span>
+      <span><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(child?.name || "")} · ${escapeHTML(itemDetails(item))}${alert ? ` · ${escapeHTML(alert.text)}` : ""}</small></span>
+      <span class="event-tag">${category.short}</span>
+    </button>`;
+  }).join("") : `<div class="empty-state"><strong>Aucun élément</strong>Rien n’est prévu pour cette période.</div>`;
+  $$("[data-family-item]", $("#familyAgendaList")).forEach(button => button.addEventListener("click", () => editItemFromAnywhere(button.dataset.familyItem)));
 }
 
 function calendarDayHTML(date, monthMode = false, activeMonth = null) {
@@ -916,6 +1022,16 @@ function shiftPeriod(direction) {
   renderAgenda();
 }
 
+function shiftFamilyPeriod(direction) {
+  const focus = fromISO(state.familyFocusDate);
+  if (state.familyCalendarView === "day") focus.setDate(focus.getDate() + direction);
+  if (state.familyCalendarView === "week" || state.familyCalendarView === "gantt") focus.setDate(focus.getDate() + direction * 7);
+  if (state.familyCalendarView === "month") focus.setMonth(focus.getMonth() + direction);
+  state.familyFocusDate = toISODate(focus);
+  state.familySelectedDate = null;
+  renderFamilyAgenda();
+}
+
 function openQuickAdd() {
   $("#quickCategoryGrid").innerHTML = Object.entries(CATEGORIES).map(([key, category]) => `<button class="quick-category" style="--category:${category.color}" data-quick-category="${key}" value="cancel">${category.icon}<br>${category.label}</button>`).join("");
   $$("[data-quick-category]", $("#quickCategoryGrid")).forEach(button => button.addEventListener("click", () => {
@@ -965,6 +1081,8 @@ function bindEvents() {
   $("#backAgendaButton").addEventListener("click", () => {
     $("#categorySection").hidden = true;
     $("#agendaSection").hidden = false;
+    $("#schoolCards").hidden = false;
+    $("#agendaListSection").hidden = false;
     renderChild();
   });
   $("#agendaAddButton").addEventListener("click", openQuickAdd);
@@ -996,6 +1114,18 @@ function bindEvents() {
     state.focusDate = toISODate(new Date());
     state.selectedDate = null;
     renderAgenda();
+  });
+  $$("[data-family-calendar-view]").forEach(button => button.addEventListener("click", () => {
+    state.familyCalendarView = button.dataset.familyCalendarView;
+    state.familySelectedDate = null;
+    renderFamilyAgenda();
+  }));
+  $("#familyPreviousPeriodButton").addEventListener("click", () => shiftFamilyPeriod(-1));
+  $("#familyNextPeriodButton").addEventListener("click", () => shiftFamilyPeriod(1));
+  $("#familyTodayButton").addEventListener("click", () => {
+    state.familyFocusDate = toISODate(new Date());
+    state.familySelectedDate = null;
+    renderFamilyAgenda();
   });
   $$("[data-nav]").forEach(button => button.addEventListener("click", () => {
     if (button.dataset.nav === "agenda") showAgenda();

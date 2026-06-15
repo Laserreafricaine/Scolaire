@@ -270,19 +270,22 @@ function showToast(message) {
 
 function showView(view) {
   state.view = view;
+  document.body.classList.toggle("child-mode", view === "child");
   $$(".view").forEach(section => section.hidden = section.id !== `${view}View`);
   $$("[data-nav]").forEach(button => button.classList.toggle("active", button.dataset.nav === view || (view === "child" && button.dataset.nav === "agenda")));
   if (view === "home") renderHome();
   if (view === "child") renderChild();
-  if (view === "children") renderChildrenManagement();
-  if (view === "settings") renderSettings();
+  if (view === "settings") {
+    renderChildrenManagement();
+    renderSettings();
+  }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function renderHome() {
   const grid = $("#childrenGrid");
   if (!data.children.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><strong>Bienvenue dans ÉCOLE</strong>Ajoutez un enfant pour commencer le suivi scolaire.</div>`;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><strong>Bienvenue dans ÉCOLE</strong>Ouvrez Réglages pour ajouter un enfant.</div>`;
   } else {
     grid.innerHTML = data.children.map(child => {
       const upcoming = getUpcoming(child.id);
@@ -350,7 +353,7 @@ function openCategory(category, itemId = null) {
 function showAgenda() {
   if (!currentChild()) {
     if (!data.children.length) {
-      showView("children");
+      showView("settings");
       showToast("Ajoutez d’abord un enfant.");
       return;
     }
@@ -372,24 +375,35 @@ function renderAgenda() {
     end = focus;
     $("#periodLabel").textContent = formatDate(focus, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     $("#calendar").className = "calendar day-calendar";
-    $("#calendar").innerHTML = `<div><strong>${focus.getDate()}</strong><span>${formatDate(focus, { weekday: "long", month: "long" })}</span></div>`;
+    $("#calendar").innerHTML = `<button class="day-calendar-button" data-calendar-date="${toISODate(focus)}" type="button" aria-label="Ajouter une action le ${formatDate(focus, { day: "numeric", month: "long" })}"><strong>${focus.getDate()}</strong><span>${formatDate(focus, { weekday: "long", month: "long" })}</span><small>Toucher pour ajouter</small></button>`;
   } else if (state.calendarView === "week") {
     start = startOfWeek(focus);
     end = addDays(start, 6);
     $("#periodLabel").textContent = `${formatDate(start, { day: "numeric", month: "short" })} – ${formatDate(end, { day: "numeric", month: "short", year: "numeric" })}`;
     $("#calendar").className = "calendar week-calendar";
     $("#calendar").innerHTML = Array.from({ length: 7 }, (_, index) => calendarDayHTML(addDays(start, index))).join("");
-  } else {
+  } else if (state.calendarView === "month") {
     start = new Date(focus.getFullYear(), focus.getMonth(), 1);
     end = endOfMonth(focus);
     const gridStart = startOfWeek(start);
     $("#periodLabel").textContent = formatDate(focus, { month: "long", year: "numeric" });
     $("#calendar").className = "calendar month-calendar";
     $("#calendar").innerHTML = `<div class="month-weekdays"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="month-grid">${Array.from({ length: 42 }, (_, index) => calendarDayHTML(addDays(gridStart, index), true, focus.getMonth())).join("")}</div>`;
+  } else {
+    start = startOfWeek(focus);
+    end = addDays(start, 6);
+    $("#periodLabel").textContent = `${formatDate(start, { day: "numeric", month: "short" })} – ${formatDate(end, { day: "numeric", month: "short", year: "numeric" })}`;
+    renderGantt(start, end);
   }
   $$("[data-calendar-date]", $("#calendar")).forEach(button => button.addEventListener("click", () => {
     state.selectedDate = button.dataset.calendarDate;
-    renderAgenda();
+    state.focusDate = button.dataset.calendarDate;
+    openQuickAdd();
+  }));
+  $$("[data-gantt-item]", $("#calendar")).forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    const item = data.items.find(entry => entry.id === button.dataset.ganttItem);
+    openCategory(item.category, item.id);
   }));
   renderFilters();
   renderAgendaList(start, end);
@@ -403,6 +417,28 @@ function calendarDayHTML(date, monthMode = false, activeMonth = null) {
   const dots = events.slice(0, 5).map(item => `<i style="--dot:${CATEGORIES[item.category].color}"></i>`).join("");
   if (monthMode) return `<button class="month-day ${selected ? "selected" : ""} ${outside ? "outside" : ""}" data-calendar-date="${iso}" type="button">${date.getDate()}<span class="day-dots">${dots}</span></button>`;
   return `<button class="calendar-day ${selected ? "selected" : ""}" data-calendar-date="${iso}" type="button"><small>${formatDate(date, { weekday: "short" })}</small><strong>${date.getDate()}</strong><span class="day-dots">${dots}</span></button>`;
+}
+
+function renderGantt(start, end) {
+  const items = childItems()
+    .filter(item => item.date && item.date >= toISODate(start) && item.date <= toISODate(end))
+    .filter(item => state.filter === "all" || item.category === state.filter)
+    .sort(sortItems);
+  const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
+  const rows = items.length ? items.map(item => {
+    const dayIndex = Math.max(0, Math.round((fromISO(item.date) - start) / 86400000));
+    const category = CATEGORIES[item.category];
+    return `<div class="gantt-row">
+      <span class="gantt-label">${escapeHTML(itemTitle(item))}</span>
+      ${days.map(date => `<button class="gantt-cell ${toISODate(date) === toISODate(new Date()) ? "today" : ""}" data-calendar-date="${toISODate(date)}" type="button" aria-label="Ajouter le ${formatDate(date, { day: "numeric", month: "long" })}"></button>`).join("")}
+      <button class="gantt-bar" data-gantt-item="${item.id}" style="--event:${category.color};left:${138 + dayIndex * 62 + 3}px;width:56px" type="button" title="${escapeHTML(itemTitle(item))}">${category.icon} ${escapeHTML(itemTitle(item))}</button>
+    </div>`;
+  }).join("") : `<div class="gantt-row"><span class="gantt-label">Aucun élément</span>${days.map(date => `<button class="gantt-cell" data-calendar-date="${toISODate(date)}" type="button" aria-label="Ajouter le ${formatDate(date, { day: "numeric", month: "long" })}"></button>`).join("")}</div>`;
+  $("#calendar").className = "calendar gantt-calendar";
+  $("#calendar").innerHTML = `<div class="gantt-board">
+    <div class="gantt-head"><span>Élément</span>${days.map(date => `<span>${formatDate(date, { weekday: "short" })}<br>${date.getDate()}</span>`).join("")}</div>
+    ${rows}
+  </div>`;
 }
 
 function renderFilters() {
@@ -662,7 +698,7 @@ function saveChild(event) {
   saveData();
   $("#childDialog").close();
   renderDatalists();
-  showView(state.view === "home" ? "home" : "children");
+  showView(state.view === "home" ? "home" : "settings");
   showToast(id ? "Profil modifié." : "Enfant ajouté.");
 }
 
@@ -676,7 +712,7 @@ function requestDeleteChild() {
     state.childId = data.children[0]?.id || null;
     saveData();
     $("#childDialog").close();
-    showView("children");
+    showView("settings");
     showToast("Profil supprimé.");
   });
 }
@@ -873,7 +909,7 @@ function renderDatalists() {
 function shiftPeriod(direction) {
   const focus = fromISO(state.focusDate);
   if (state.calendarView === "day") focus.setDate(focus.getDate() + direction);
-  if (state.calendarView === "week") focus.setDate(focus.getDate() + direction * 7);
+  if (state.calendarView === "week" || state.calendarView === "gantt") focus.setDate(focus.getDate() + direction * 7);
   if (state.calendarView === "month") focus.setMonth(focus.getMonth() + direction);
   state.focusDate = toISODate(focus);
   state.selectedDate = null;
@@ -887,6 +923,27 @@ function openQuickAdd() {
     openCategory(button.dataset.quickCategory);
   }));
   $("#quickAddDialog").showModal();
+}
+
+function setupMobileViewport() {
+  document.addEventListener("dblclick", event => event.preventDefault(), { passive: false });
+  document.addEventListener("gesturestart", event => event.preventDefault(), { passive: false });
+
+  const updateViewport = () => {
+    const viewport = window.visualViewport;
+    const height = viewport?.height || window.innerHeight;
+    document.documentElement.style.setProperty("--visual-height", `${height}px`);
+    document.body.classList.toggle("keyboard-open", Boolean(viewport && window.innerHeight - viewport.height > 140));
+  };
+  window.visualViewport?.addEventListener("resize", updateViewport);
+  window.visualViewport?.addEventListener("scroll", updateViewport);
+  window.addEventListener("resize", updateViewport);
+  updateViewport();
+
+  document.addEventListener("focusin", event => {
+    if (!event.target.matches("input, select, textarea")) return;
+    setTimeout(() => event.target.scrollIntoView({ behavior: "smooth", block: "center" }), 180);
+  });
 }
 
 function readSmallFile(file, callback) {
@@ -903,8 +960,7 @@ function readSmallFile(file, callback) {
 function bindEvents() {
   $("#brandButton").addEventListener("click", () => showView("home"));
   $("#topSettingsButton").addEventListener("click", () => showView("settings"));
-  $("#addChildHomeButton").addEventListener("click", () => openChildDialog());
-  $("#addChildButton").addEventListener("click", () => openChildDialog());
+  $("#addChildSettingsButton").addEventListener("click", () => openChildDialog());
   $("#backHomeButton").addEventListener("click", () => showView("home"));
   $("#backAgendaButton").addEventListener("click", () => {
     $("#categorySection").hidden = true;
@@ -963,5 +1019,6 @@ function registerServiceWorker() {
 
 renderDatalists();
 bindEvents();
+setupMobileViewport();
 showView("home");
 registerServiceWorker();

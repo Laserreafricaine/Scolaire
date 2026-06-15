@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#2457e6">
   <meta name="description" content="ÉCOLE, le suivi scolaire familial, simple et local.">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -10,6 +10,9 @@
   <meta name="apple-mobile-web-app-title" content="ÉCOLE">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <title>ÉCOLE</title>
 </head>
@@ -30,7 +33,6 @@
           <h1 id="homeTitle">Les enfants</h1>
           <p>Choisissez un profil pour ouvrir son espace scolaire.</p>
         </div>
-        <button class="primary-small" id="addChildHomeButton" type="button">+ Enfant</button>
       </div>
       <div class="children-grid" id="childrenGrid"></div>
       <section class="panel family-overview">
@@ -56,6 +58,7 @@
           <button data-calendar-view="day" type="button">Jour</button>
           <button data-calendar-view="week" type="button">Semaine</button>
           <button data-calendar-view="month" type="button">Mois</button>
+          <button data-calendar-view="gantt" type="button">Gantt</button>
         </div>
         <div class="calendar-toolbar">
           <button class="calendar-arrow" id="previousPeriodButton" type="button" aria-label="Période précédente">‹</button>
@@ -110,16 +113,15 @@
       </section>
     </section>
 
-    <section id="childrenView" class="view" hidden>
-      <div class="section-heading">
-        <div><p class="eyebrow">Profils</p><h1>Gérer les enfants</h1><p>Ajoutez, modifiez ou supprimez un profil.</p></div>
-        <button class="primary-small" id="addChildButton" type="button">+ Enfant</button>
-      </div>
-      <div class="management-list" id="childrenManagementList"></div>
-    </section>
-
     <section id="settingsView" class="view" hidden>
       <div class="section-heading"><div><p class="eyebrow">Personnalisation</p><h1>Réglages</h1><p>Vos données restent sur cet appareil.</p></div></div>
+      <section class="panel settings-group children-settings">
+        <div class="panel-heading">
+          <div><h2>Enfants</h2><p class="settings-help">Ajoutez, modifiez ou supprimez les profils scolaires.</p></div>
+          <button class="primary-small" id="addChildSettingsButton" type="button">+ Enfant</button>
+        </div>
+        <div class="management-list" id="childrenManagementList"></div>
+      </section>
       <div id="settingsContent"></div>
     </section>
   </main>
@@ -127,7 +129,6 @@
   <nav class="bottom-nav" aria-label="Navigation principale">
     <button data-nav="home" type="button"><span>⌂</span><small>Accueil</small></button>
     <button data-nav="agenda" type="button"><span>▦</span><small>Agenda</small></button>
-    <button data-nav="children" type="button"><span>●</span><small>Enfants</small></button>
     <button data-nav="settings" type="button"><span>⚙</span><small>Réglages</small></button>
   </nav>
 

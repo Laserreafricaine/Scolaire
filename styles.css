@@ -169,10 +169,16 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .form-zone { min-width: 0; margin-top: 13px; border: 2px solid transparent; border-radius: 20px; padding: 14px; overflow: hidden; }
 .main-zone { border-color: color-mix(in srgb, var(--detail) 52%, white); background: color-mix(in srgb, var(--detail) 9%, white); }
 .date-zone { border-color: #f5bd3f; background: #fff5cf; }
-.date-zone .fields-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+.date-zone .fields-grid { grid-template-columns: minmax(0, 1fr); width: 100%; max-width: 100%; margin-inline: auto; }
 .date-zone .field { min-width: 0; max-width: 100%; }
-.date-zone input, .date-zone select { display: block; min-width: 0; max-width: 100%; width: 100%; }
-.date-zone input[type="date"], .date-zone input[type="time"] { inline-size: 100%; }
+.date-zone input, .date-zone select { display: block; box-sizing: border-box; min-width: 0; max-width: 100%; width: 100%; margin-inline: auto; }
+.date-zone input[type="date"], .date-zone input[type="time"] {
+  inline-size: 100%; min-inline-size: 0; padding-inline: 12px; text-align: center;
+}
+.date-zone input[type="date"]::-webkit-date-and-time-value,
+.date-zone input[type="time"]::-webkit-date-and-time-value { width: 100%; min-width: 0; text-align: center; }
+.date-zone input[type="date"]::-webkit-datetime-edit,
+.date-zone input[type="time"]::-webkit-datetime-edit { display: block; min-width: 0; padding: 0; text-align: center; }
 .zone-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 13px; }
 .zone-heading > span { width: 37px; height: 37px; flex: 0 0 37px; display: grid; place-items: center; border-radius: 12px; background: var(--detail); color: white; font: 800 17px "Baloo 2", sans-serif; }
 .date-zone .zone-heading > span { background: #e69700; }
@@ -196,8 +202,9 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .more-fields summary { min-height: 48px; padding: 13px; color: var(--detail); font-weight: 800; cursor: pointer; }
 .more-fields .fields-grid { padding: 0 13px 13px; }
 .note-field, .attachment-field { margin-top: 11px; border: 1px solid var(--line); border-radius: 16px; padding: 12px; background: #f8fbfe; }
-.form-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 11px; }
-.form-actions > :only-child { grid-column: 1 / -1; }
+.form-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 11px; }
+.form-actions.editing { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.form-actions .primary-button { width: 100%; }
 .detail-list-head { margin: 19px 2px 9px; }
 .detail-list-head p { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
 .detail-list { display: grid; gap: 8px; }
@@ -273,6 +280,7 @@ dialog::backdrop { background: rgba(18, 33, 61, .58); backdrop-filter: blur(3px)
   .school-card { min-height: 96px; padding: 7px; }
   .fields-grid { grid-template-columns: 1fr; }
   .date-zone .fields-grid { grid-template-columns: minmax(0, 1fr); }
+  .form-actions.editing { grid-template-columns: minmax(0, 1fr); }
   .field.full { grid-column: auto; }
   .management-card { grid-template-columns: 54px 1fr; }
   .management-card button { grid-column: 1 / -1; }

@@ -637,7 +637,8 @@ function resetItemForm() {
   $("#itemAttachment").value = "";
   $("#attachmentStatus").textContent = "Une image légère ou un PDF.";
   $("#deleteInFormButton").hidden = true;
-  $("#saveItemButton").textContent = `Ajouter`;
+  $(".form-actions", $("#itemForm")).classList.remove("editing");
+  $("#saveItemButton").textContent = "Enregistrer";
   state.pendingAttachment = null;
   const dateField = $('[data-item-field="date"]');
   if (dateField) dateField.value = state.selectedDate || state.focusDate;
@@ -656,6 +657,7 @@ function fillItemForm(item) {
   });
   $("#itemNote").value = item.note || "";
   $("#deleteInFormButton").hidden = false;
+  $(".form-actions", $("#itemForm")).classList.add("editing");
   $("#saveItemButton").textContent = "Enregistrer les modifications";
   $("#attachmentStatus").textContent = item.attachment ? `Pièce jointe enregistrée : ${item.attachment.name}` : "Une image légère ou un PDF.";
   state.pendingAttachment = item.attachment || null;

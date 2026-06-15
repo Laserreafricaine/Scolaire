@@ -139,7 +139,7 @@
       <section class="panel settings-group children-settings">
         <div class="panel-heading">
           <div><h2>Enfants</h2><p class="settings-help">Ajoutez, modifiez ou supprimez les profils scolaires.</p></div>
-          <button class="primary-small" id="addChildSettingsButton" type="button">+ Enfant</button>
+          <button class="primary-small add-child-settings-button" id="addChildSettingsButton" type="button">+ Ajouter un enfant</button>
         </div>
         <div class="management-list" id="childrenManagementList"></div>
       </section>
@@ -156,17 +156,19 @@
   <dialog id="childDialog">
     <form method="dialog" id="childForm" class="dialog-card">
       <input id="childId" type="hidden">
-      <div class="dialog-heading"><div><p class="eyebrow">Profil scolaire</p><h2 id="childDialogTitle">Ajouter un enfant</h2></div><button class="dialog-close" value="cancel" aria-label="Fermer">×</button></div>
+      <div class="dialog-heading"><div><p class="eyebrow">Profil scolaire</p><h2 id="childDialogTitle">Ajouter un enfant</h2></div><button class="dialog-close" id="cancelChildButton" type="button" aria-label="Annuler et fermer">×</button></div>
       <div class="avatar-preview" id="avatarPreview">EN</div>
       <label class="field"><span>Prénom *</span><input id="childName" required autocomplete="given-name"></label>
       <div class="two-columns">
-        <label class="field"><span>Classe *</span><input id="childClass" required list="classesList"></label>
+        <label class="field"><span>Classe *</span><input id="childClass" required placeholder="Choisir ou saisir une classe"></label>
         <label class="field"><span>Couleur d’avatar</span><input id="childColor" type="color" value="#2457e6"></label>
       </div>
+      <div class="choice-buttons class-choice-buttons" id="childClassChoices" aria-label="Classes proposées"></div>
       <label class="field"><span>Établissement *</span><input id="childSchool" required list="schoolsList"></label>
       <label class="field"><span>Enseignant ou professeur principal</span><input id="childTeacher" list="teachersList"></label>
       <label class="field"><span>Photo d’avatar</span><input id="childAvatar" type="file" accept="image/*"></label>
       <div class="form-actions">
+        <button class="secondary-button" id="cancelChildFormButton" type="button">Annuler</button>
         <button class="danger-button" id="deleteChildButton" type="button" hidden>Supprimer</button>
         <button class="primary-button" id="saveChildButton" value="default">Enregistrer</button>
       </div>

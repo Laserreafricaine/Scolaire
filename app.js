@@ -609,7 +609,7 @@ function buildItemFields(category) {
   $("#dateFields").innerHTML = [
     fieldHTML(["date", category === CATEGORIES.documents ? "Date limite" : category === CATEGORIES.supplies ? "Date nécessaire" : "Date", "date", true]),
     fieldHTML(["time", "Heure", "time", false]),
-    `<label class="field full"><span>Rappel</span><select data-item-field="reminder">${data.refs.reminderOptions.map(option => `<option>${escapeHTML(option)}</option>`).join("")}</select></label>`
+    `<fieldset class="button-choice-field field full"><legend>Rappel</legend><input data-item-field="reminder" type="hidden"><div class="choice-buttons reminder-choice-buttons">${data.refs.reminderOptions.map(option => `<button data-reminder-choice="${escapeHTML(option)}" type="button">${escapeHTML(option)}</button>`).join("")}</div></fieldset>`
   ].join("");
   $("#moreFieldsPanel").hidden = !extras.length;
   const suggestions = category.subjectRef ? data.refs[category.subjectRef] : data.refs.suggestions;
@@ -619,6 +619,13 @@ function buildItemFields(category) {
     const first = $("[data-item-field]", $("#mainFields"));
     if (first) first.value = button.dataset.suggestion;
   }));
+  $$("[data-reminder-choice]", $("#dateFields")).forEach(button => button.addEventListener("click", () => setReminderChoice(button.dataset.reminderChoice)));
+}
+
+function setReminderChoice(value) {
+  const input = $('[data-item-field="reminder"]');
+  if (input) input.value = value;
+  $$("[data-reminder-choice]", $("#dateFields")).forEach(button => button.classList.toggle("active", button.dataset.reminderChoice === value));
 }
 
 function fieldHTML(field) {
@@ -643,7 +650,7 @@ function resetItemForm() {
   const dateField = $('[data-item-field="date"]');
   if (dateField) dateField.value = state.selectedDate || state.focusDate;
   const reminderField = $('[data-item-field="reminder"]');
-  if (reminderField) reminderField.value = data.preferences.defaultReminder;
+  if (reminderField) setReminderChoice(data.preferences.defaultReminder);
 }
 
 function fillItemForm(item) {
@@ -655,6 +662,7 @@ function fillItemForm(item) {
     if (input.type === "checkbox") input.checked = Boolean(value);
     else input.value = value ?? "";
   });
+  setReminderChoice(item.reminder || data.preferences.defaultReminder);
   $("#itemNote").value = item.note || "";
   $("#deleteInFormButton").hidden = false;
   $(".form-actions", $("#itemForm")).classList.add("editing");
@@ -769,8 +777,24 @@ function openChildDialog(id = null) {
   $("#childTeacher").value = child?.teacher || "";
   $("#childColor").value = child?.color || "#2457e6";
   state.pendingAvatar = child?.avatar || null;
+  renderChildClassChoices();
   updateAvatarPreview();
   $("#childDialog").showModal();
+}
+
+function renderChildClassChoices() {
+  const selected = $("#childClass").value;
+  $("#childClassChoices").innerHTML = data.refs.classes.map(value => `<button class="${value === selected ? "active" : ""}" data-child-class-choice="${escapeHTML(value)}" type="button">${escapeHTML(value)}</button>`).join("");
+  $$("[data-child-class-choice]", $("#childClassChoices")).forEach(button => button.addEventListener("click", () => {
+    $("#childClass").value = button.dataset.childClassChoice;
+    renderChildClassChoices();
+  }));
+}
+
+function closeChildDialog() {
+  $("#childForm").reset();
+  state.pendingAvatar = null;
+  $("#childDialog").close("cancel");
 }
 
 function updateAvatarPreview() {
@@ -840,7 +864,7 @@ function renderSettings() {
   $("#settingsContent").innerHTML = `
     <section class="panel settings-group">
       <h2>Rappel par défaut</h2><p class="settings-help">Appliqué à chaque nouvel élément.</p>
-      <label class="field"><span>Délai</span><select id="defaultReminderSelect">${data.refs.reminderOptions.map(option => `<option ${option === data.preferences.defaultReminder ? "selected" : ""}>${escapeHTML(option)}</option>`).join("")}</select></label>
+      <div class="choice-buttons settings-reminder-buttons">${data.refs.reminderOptions.map(option => `<button class="${option === data.preferences.defaultReminder ? "active" : ""}" data-default-reminder="${escapeHTML(option)}" type="button">${escapeHTML(option)}</button>`).join("")}</div>
     </section>
     ${groups.map(([key, title, help]) => `<section class="panel settings-group"><h2>${title}</h2><p class="settings-help">${help}</p>
       <div class="reference-list">${data.refs[key].map(value => `<span class="reference-chip"><button data-rename-ref="${key}|${escapeHTML(value)}" type="button" aria-label="Renommer">✎</button>${escapeHTML(value)}${value === "Autres" ? "" : `<button data-remove-ref="${key}|${escapeHTML(value)}" type="button" aria-label="Supprimer">×</button>`}</span>`).join("")}</div>
@@ -851,15 +875,17 @@ function renderSettings() {
         <button class="primary-button" id="exportButton" type="button">Exporter JSON</button>
         <button class="secondary-button" id="importButton" type="button">Importer JSON</button>
         <button class="secondary-button" id="clearDoneButton" type="button">Supprimer les terminés</button>
+        <button class="danger-button" id="clearAllItemsButton" type="button">Supprimer toutes les tâches</button>
         <button class="danger-button" id="resetChildButton" type="button">Réinitialiser l’enfant</button>
         <button class="danger-button" id="resetAllButton" type="button">Réinitialisation complète</button>
       </div>
     </section>`;
-  $("#defaultReminderSelect").addEventListener("change", event => {
-    data.preferences.defaultReminder = event.target.value;
+  $$("[data-default-reminder]").forEach(button => button.addEventListener("click", () => {
+    data.preferences.defaultReminder = button.dataset.defaultReminder;
     saveData();
+    renderSettings();
     showToast("Rappel par défaut enregistré.");
-  });
+  }));
   $$("[data-add-ref]").forEach(form => form.addEventListener("submit", event => {
     event.preventDefault();
     const input = $("input", form);
@@ -879,6 +905,7 @@ function renderSettings() {
   $("#exportButton").addEventListener("click", exportData);
   $("#importButton").addEventListener("click", () => $("#importInput").click());
   $("#clearDoneButton").addEventListener("click", clearCompleted);
+  $("#clearAllItemsButton").addEventListener("click", clearAllItems);
   $("#resetChildButton").addEventListener("click", resetCurrentChild);
   $("#resetAllButton").addEventListener("click", resetAll);
 }
@@ -968,6 +995,19 @@ function clearCompleted() {
     saveData();
     renderSettings();
     showToast("Éléments terminés supprimés.");
+  });
+}
+
+function clearAllItems() {
+  const count = data.items.length;
+  if (!count) return showToast("Aucune tâche à supprimer.");
+  askConfirm("Supprimer toutes les tâches ?", `${count} tâche${count > 1 ? "s" : ""} de tous les enfants seront supprimées définitivement. Les profils seront conservés.`, () => {
+    data.items = [];
+    saveData();
+    state.selectedDate = null;
+    state.familySelectedDate = null;
+    renderSettings();
+    showToast("Toutes les tâches ont été supprimées.");
   });
 }
 
@@ -1091,8 +1131,11 @@ function bindEvents() {
   $("#itemForm").addEventListener("submit", saveItem);
   $("#deleteInFormButton").addEventListener("click", () => requestDeleteItem($("#editingItemId").value));
   $("#childForm").addEventListener("submit", saveChild);
+  $("#cancelChildButton").addEventListener("click", closeChildDialog);
+  $("#cancelChildFormButton").addEventListener("click", closeChildDialog);
   $("#deleteChildButton").addEventListener("click", requestDeleteChild);
   $("#childName").addEventListener("input", updateAvatarPreview);
+  $("#childClass").addEventListener("input", renderChildClassChoices);
   $("#childColor").addEventListener("input", updateAvatarPreview);
   $("#childAvatar").addEventListener("change", event => readSmallFile(event.target.files[0], result => {
     state.pendingAvatar = result;

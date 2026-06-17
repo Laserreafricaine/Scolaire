@@ -310,7 +310,7 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 
 .bottom-nav {
   position: fixed; z-index: 20; left: 50%; bottom: 0; transform: translateX(-50%); width: min(100%, 720px);
-  display: grid; grid-template-columns: repeat(4, 1fr); padding: 7px 6px calc(7px + env(safe-area-inset-bottom));
+  display: grid; grid-template-columns: repeat(3, 1fr); padding: 7px 6px calc(7px + env(safe-area-inset-bottom));
   border: 1px solid var(--line); border-bottom: 0; border-radius: 19px 19px 0 0; background: rgba(255,255,255,.96); box-shadow: 0 -8px 25px rgba(30,70,120,.11); backdrop-filter: blur(12px);
 }
 .bottom-nav button { min-height: 55px; border: 0; border-radius: 13px; background: transparent; color: var(--muted); }
@@ -502,24 +502,6 @@ dialog::backdrop { background: rgba(18, 33, 61, .58); backdrop-filter: blur(3px)
 .guide-next { min-height: 44px; border: 0; border-radius: 13px; padding: 8px 18px; background: var(--blue); color: white; font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 15px; }
 
 /* ===== Améliorations v3 ===== */
-.agenda-only-mode #backHomeButton,
-.agenda-only-mode #profileBanner {
-  display: none;
-}
-.agenda-only-mode #agendaSection {
-  margin-top: 0;
-  border-color: color-mix(in srgb, var(--accent) 35%, #b8daf5);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 10%, white), #edf8ff);
-}
-.agenda-only-mode #agendaSection .panel-heading {
-  padding: 3px 2px 5px;
-}
-.agenda-only-mode #agendaSection .panel-heading .eyebrow::after {
-  content: " détaillé";
-}
-.agenda-only-mode #agendaListSection {
-  border-color: color-mix(in srgb, var(--accent) 24%, #f2d491);
-}
 .child-mode.task-form-mode .fab {
   display: none;
 }

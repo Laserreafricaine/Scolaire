@@ -331,7 +331,6 @@ function showToast(message) {
 function syncLayoutClasses() {
   const childVisible = state.view === "child";
   document.body.classList.toggle("child-mode", childVisible);
-  document.body.classList.toggle("agenda-only-mode", childVisible && state.activeNav === "agenda");
   document.body.classList.toggle("task-form-mode", childVisible && !$("#categorySection").hidden);
 }
 
@@ -453,18 +452,6 @@ function openCategory(category, itemId = null) {
   if (itemId) fillItemForm(data.items.find(item => item.id === itemId));
   else resetItemForm();
   $("#categorySection").scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function showAgenda() {
-  if (!currentChild()) {
-    if (!data.children.length) {
-      showView("settings");
-      showToast("Ajoutez d’abord un enfant.");
-      return;
-    }
-    state.childId = data.children[0].id;
-  }
-  showChildHome("agenda", "agenda");
 }
 
 function renderAgenda() {
@@ -1515,7 +1502,7 @@ function openGuideTaskChoice() {
 }
 
 const GUIDE_STEPS = [
-  { kind: "panel", title: "Bienvenue dans ÉCOLE", text: "On prépare l’appli ensemble en une minute : un enfant, une première action, puis les deux agendas.", next: "Créer le premier enfant" },
+  { kind: "panel", title: "Bienvenue dans ÉCOLE", text: "On prépare l’appli ensemble en une minute : un enfant, une première action, puis l’accueil famille et l’espace enfant.", next: "Créer le premier enfant" },
   { kind: "child" },
   { kind: "spot", prep: () => showView("home"), target: "#childrenGrid", title: "Accueil familial", text: "Ici, chaque grande carte représente un enfant. Touchez une carte pour entrer dans son espace." },
   { kind: "spot", prep: () => showChildHome("agenda", "child"), target: "#agendaSection", title: "L’agenda de l’enfant", text: "La semaine apparaît en Gantt vertical. Les tâches se voient dans le calendrier puis dans la liste dessous." },
@@ -1693,8 +1680,7 @@ function bindEvents() {
     renderFamilyAgenda();
   });
   $$("[data-nav]").forEach(button => button.addEventListener("click", () => {
-    if (button.dataset.nav === "agenda") showAgenda();
-    else if (button.dataset.nav === "child") showChildHome("top", "child");
+    if (button.dataset.nav === "child") showChildHome("top", "child");
     else showView(button.dataset.nav);
   }));
   $("#confirmDialog").addEventListener("close", () => {

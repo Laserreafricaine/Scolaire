@@ -1,7 +1,7 @@
 "use strict";
 
 const STORAGE_KEY = "ecole-pwa-v1";
-const APP_VERSION = 1;
+const APP_VERSION = 3;
 const MAX_ATTACHMENT_SIZE = 750 * 1024;
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -9,9 +9,9 @@ const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const CATEGORIES = {
   homework: {
     label: "Devoirs", short: "Devoirs", icon: "✎", color: "#2457e6",
-    eyebrow: "Le travail à faire", titleField: "work", subjectRef: "subjects",
+    eyebrow: "Le travail à faire", titleField: "work", subjectRef: "subjects", mainFields: ["work", "subject"],
     fields: [
-      ["subject", "Matière", "text", true, "Ex. Mathématiques", "subjects"],
+      ["subject", "Matière", "text", false, "Ex. Mathématiques", "subjects"],
       ["work", "Travail demandé", "text", true, "Ex. exercices 4 et 5 page 82"],
       ["manual", "Manuel, page ou exercice", "text", false, "Ex. page 82, exercice 4"],
       ["estimatedTime", "Temps estimé", "text", false, "Ex. 30 minutes"]
@@ -19,9 +19,9 @@ const CATEGORIES = {
   },
   tests: {
     label: "Contrôles et notes", short: "Contrôles", icon: "✓", color: "#f02f78",
-    eyebrow: "Évaluations et résultats", titleField: "topic", subjectRef: "subjects",
+    eyebrow: "Évaluations et résultats", titleField: "topic", subjectRef: "subjects", mainFields: ["topic", "subject"],
     fields: [
-      ["subject", "Matière", "text", true, "Ex. Français", "subjects"],
+      ["subject", "Matière", "text", false, "Ex. Français", "subjects"],
       ["topic", "Sujet ou chapitre", "text", true, "Ex. dictée, chapitre 6"],
       ["revision", "Révisions", "textarea", false, "Points à revoir"],
       ["score", "Note obtenue", "text", false, "Ex. 15"],
@@ -31,10 +31,10 @@ const CATEGORIES = {
   },
   trips: {
     label: "Sorties scolaires", short: "Sorties", icon: "⌁", color: "#00a99d",
-    eyebrow: "Activités hors de l’école", titleField: "name",
+    eyebrow: "Activités hors de l’école", titleField: "name", mainFields: ["name", "location"],
     fields: [
       ["name", "Nom", "text", true, "Ex. visite du musée"],
-      ["location", "Lieu", "text", true, "Adresse ou lieu"],
+      ["location", "Lieu", "text", false, "Adresse ou lieu"],
       ["schedule", "Horaires", "text", false, "Ex. 8 h 30 - 16 h"],
       ["group", "Classe ou groupe", "text", false, "Ex. CM2 A"],
       ["companion", "Accompagnateur", "text", false, "Nom ou rôle"],
@@ -46,7 +46,7 @@ const CATEGORIES = {
   },
   supplies: {
     label: "Fournitures", short: "Fournitures", icon: "▤", color: "#f2a900",
-    eyebrow: "Matériel scolaire", titleField: "article", subjectRef: "subjects",
+    eyebrow: "Matériel scolaire", titleField: "article", subjectRef: "subjects", mainFields: ["article", "use"],
     fields: [
       ["article", "Article", "text", true, "Ex. cahier 24 × 32"],
       ["use", "Matière ou usage", "text", false, "Ex. Arts plastiques", "subjects"],
@@ -58,7 +58,7 @@ const CATEGORIES = {
   },
   meetings: {
     label: "Rendez-vous école", short: "Rendez-vous", icon: "◇", color: "#009bd4",
-    eyebrow: "Échanges avec l’école", titleField: "person",
+    eyebrow: "Échanges avec l’école", titleField: "person", mainFields: ["person", "role"],
     fields: [
       ["person", "Personne rencontrée", "text", true, "Ex. Mme Martin"],
       ["role", "Rôle", "text", false, "Ex. enseignante"],
@@ -70,10 +70,10 @@ const CATEGORIES = {
   },
   documents: {
     label: "Documents scolaires", short: "Documents", icon: "▱", color: "#7b42d1",
-    eyebrow: "École, administration et cantine", titleField: "documentType",
+    eyebrow: "École, administration et cantine", titleField: "documentType", mainFields: ["documentType", "service"],
     fields: [
       ["documentType", "Type de document", "text", true, "Ex. Cantine", "documentTypes"],
-      ["service", "Service concerné", "text", true, "Ex. Administration", "services"],
+      ["service", "Service concerné", "text", false, "Ex. Administration", "services"],
       ["receivedDate", "Date de réception", "date", false],
       ["signatureRequired", "Signature nécessaire", "checkbox", false],
       ["submitted", "Remis", "checkbox", false]
@@ -125,7 +125,9 @@ let state = {
   familySelectedDate: null,
   pendingConfirm: null,
   pendingAttachment: null,
-  pendingAvatar: null
+  pendingAvatar: null,
+  pendingAddDate: null,
+  quickCategoryChosen: false
 };
 
 function createDefaultData() {
@@ -326,6 +328,13 @@ function showToast(message) {
   showToast.timer = setTimeout(() => toast.classList.remove("show"), 1800);
 }
 
+function syncLayoutClasses() {
+  const childVisible = state.view === "child";
+  document.body.classList.toggle("child-mode", childVisible);
+  document.body.classList.toggle("agenda-only-mode", childVisible && state.activeNav === "agenda");
+  document.body.classList.toggle("task-form-mode", childVisible && !$("#categorySection").hidden);
+}
+
 function showView(view) {
   state.view = view;
   if (view === "home" || view === "settings") state.activeNav = view;
@@ -333,8 +342,8 @@ function showView(view) {
     state.familyCalendarView = "gantt";
     state.familySelectedDate = null;
   }
-  document.body.classList.toggle("child-mode", view === "child");
   $$(".view").forEach(section => section.hidden = section.id !== `${view}View`);
+  syncLayoutClasses();
   $$("[data-nav]").forEach(button => button.classList.toggle("active", button.dataset.nav === state.activeNav));
   if (view === "home") renderHome();
   if (view === "child") renderChild();
@@ -402,6 +411,7 @@ function showChildHome(scrollTarget = "top", nav = "child") {
   $("#schoolCards").hidden = true;
   $("#childCategoryZone").hidden = true;
   $("#agendaListSection").hidden = false;
+  syncLayoutClasses();
   showView("child");
   const target = scrollTarget === "list" ? $("#agendaListSection") : scrollTarget === "agenda" ? $("#agendaSection") : $("#profileBanner");
   setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
@@ -438,6 +448,7 @@ function openCategory(category, itemId = null) {
   $("#childCategoryZone").hidden = true;
   $("#agendaListSection").hidden = true;
   $("#categorySection").hidden = false;
+  syncLayoutClasses();
   renderChild();
   if (itemId) fillItemForm(data.items.find(item => item.id === itemId));
   else resetItemForm();
@@ -495,6 +506,10 @@ function renderAgenda() {
     event.stopPropagation();
     openItemSummary(button.dataset.ganttItem);
   }));
+  $$("[data-toggle-item]", $("#calendar")).forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    toggleItem(button.dataset.toggleItem);
+  }));
   renderFilters();
   renderAgendaList(start, end);
 }
@@ -538,6 +553,10 @@ function renderFamilyAgenda() {
     event.stopPropagation();
     openItemSummary(button.dataset.familyGanttItem);
   }));
+  $$("[data-toggle-item]", $("#familyCalendar")).forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    toggleItem(button.dataset.toggleItem);
+  }));
   $$("[data-family-add]", $("#familyCalendar")).forEach(button => button.addEventListener("click", addFromFamily));
   renderFamilyFilters();
   renderFamilyAgendaList(start, end);
@@ -568,11 +587,14 @@ function renderFamilyGantt(start, end) {
       return dayItems.map(item => {
         const category = CATEGORIES[item.category];
         const child = data.children.find(entry => entry.id === item.childId);
-        return `<button class="gantt-task ${isDone(item) ? "done" : ""} ${isOverdue(item) ? "urgent-event" : ""}" data-family-gantt-item="${item.id}" style="--event:${child?.color || category.color};--shift:${shifts[item.id]}" type="button">
-          <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(child?.name || "")} · ${category.short}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
-        </button>`;
+        return `<div class="gantt-task-row ${isDone(item) ? "done" : ""}" style="--event:${child?.color || category.color};--shift:${shifts[item.id]}">
+          <button class="gantt-check" data-toggle-item="${item.id}" type="button" aria-label="${isDone(item) ? "Réactiver" : "Marquer comme fait"}">${isDone(item) ? "✓" : ""}</button>
+          <button class="gantt-task ${isDone(item) ? "done" : ""} ${isOverdue(item) ? "urgent-event" : ""}" data-family-gantt-item="${item.id}" style="--event:${child?.color || category.color}" type="button">
+            <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(child?.name || "")} · ${category.short}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
+          </button>
+        </div>`;
       }).join("");
-    })() : `<button class="gantt-empty-day gantt-empty-static" data-family-add type="button">Aucune tâche<br><small>Toucher pour ajouter</small></button>`;
+    })() : `<button class="gantt-empty-day gantt-empty-static" data-family-add data-family-add-date="${iso}" type="button">Aucune tâche<br><small>Toucher pour ajouter</small></button>`;
     return `<article class="gantt-day ${today ? "today" : ""}">
       <button class="gantt-day-head" data-family-calendar-date="${iso}" type="button">
         <span>${formatDate(date, { weekday: "short" })}</span><strong>${date.getDate()}</strong>
@@ -688,9 +710,12 @@ function renderGantt(start, end) {
       const shifts = timeShifts(dayItems);
       return dayItems.map(item => {
         const category = CATEGORIES[item.category];
-        return `<button class="gantt-task ${isDone(item) ? "done" : ""} ${isOverdue(item) ? "urgent-event" : ""}" data-gantt-item="${item.id}" style="--event:${category.color};--shift:${shifts[item.id]}" type="button">
-          <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${category.short}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
-        </button>`;
+        return `<div class="gantt-task-row ${isDone(item) ? "done" : ""}" style="--event:${category.color};--shift:${shifts[item.id]}">
+          <button class="gantt-check" data-toggle-item="${item.id}" type="button" aria-label="${isDone(item) ? "Réactiver" : "Marquer comme fait"}">${isDone(item) ? "✓" : ""}</button>
+          <button class="gantt-task ${isDone(item) ? "done" : ""} ${isOverdue(item) ? "urgent-event" : ""}" data-gantt-item="${item.id}" style="--event:${category.color}" type="button">
+            <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${category.short}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
+          </button>
+        </div>`;
       }).join("");
     })() : `<button class="gantt-empty-day" data-calendar-date="${iso}" type="button">Aucune tâche<br><small>Toucher pour ajouter</small></button>`;
     return `<article class="gantt-day ${today ? "today" : ""}">
@@ -806,8 +831,13 @@ function renderCategory() {
 }
 
 function buildItemFields(category) {
-  const main = category.fields.slice(0, 2);
-  const extras = category.fields.slice(2);
+  const orderedMainKeys = [...(category.mainFields || [])];
+  category.fields.filter(field => field[3]).forEach(field => {
+    if (!orderedMainKeys.includes(field[0])) orderedMainKeys.push(field[0]);
+  });
+  const visibleKeys = new Set(orderedMainKeys);
+  const main = orderedMainKeys.map(key => category.fields.find(field => field[0] === key)).filter(Boolean);
+  const extras = category.fields.filter(field => !visibleKeys.has(field[0]));
   $("#mainFields").innerHTML = main.map(fieldHTML).join("");
   $("#extraFields").innerHTML = extras.map(fieldHTML).join("");
   $("#dateFields").innerHTML = [
@@ -818,8 +848,8 @@ function buildItemFields(category) {
   $("#moreFieldsPanel").hidden = !extras.length;
   const noSuggestions = ["meetings", "trips", "documents"];
   const suggestions = noSuggestions.includes(state.category) ? [] : category.subjectRef ? data.refs[category.subjectRef] : data.refs.suggestions;
-  const targetKey = state.category === "supplies" ? "use" : main[0][0];
-  const targetInput = $(`[data-item-field="${targetKey}"]`, $("#mainFields"));
+  const targetKey = state.category === "supplies" ? "use" : category.subjectRef ? "subject" : main[0]?.[0];
+  const targetInput = $(`[data-item-field="${targetKey}"]`, $("#itemForm"));
   if (suggestions && suggestions.length && targetInput) {
     const box = document.createElement("div");
     box.className = "suggestion-inline";
@@ -938,8 +968,17 @@ function saveItem(event) {
   state.selectedDate = null;
   state.filter = "all";
   resetItemForm();
-  if (guide.active && guide.awaiting === "item") { guide.awaiting = null; guide.next(); return; }
+  if (guide.active && guide.awaiting === "item") { guide.awaiting = null; guide.show(); return; }
   showChildHome("list");
+}
+
+function cancelItemForm() {
+  resetItemForm();
+  showChildHome("agenda");
+  if (guide.active && guide.awaiting === "item") {
+    guide.awaiting = null;
+    guide.next();
+  }
 }
 
 function toggleItem(id) {
@@ -1389,9 +1428,11 @@ function shiftFamilyPeriod(direction) {
 }
 
 function openQuickAdd() {
+  state.quickCategoryChosen = false;
   $("#quickCategoryGrid").innerHTML = Object.entries(CATEGORIES).map(([key, category]) => `<button class="quick-category" type="button" style="--category:${category.color}" data-quick-category="${key}">${category.icon}<br>${category.label}</button>`).join("");
   $$("[data-quick-category]", $("#quickCategoryGrid")).forEach(button => button.addEventListener("click", () => {
     const category = button.dataset.quickCategory;
+    state.quickCategoryChosen = true;
     $("#quickAddDialog").close();
     requestAnimationFrame(() => openCategory(category));
   }));
@@ -1437,29 +1478,50 @@ function openChildPicker() {
   $$("[data-pick-child]", $("#childPickerGrid")).forEach(button => button.addEventListener("click", () => {
     const id = button.dataset.pickChild;
     $("#childPickerDialog").close();
-    requestAnimationFrame(() => { state.childId = id; showView("child"); openQuickAdd(); });
+    requestAnimationFrame(() => {
+      state.childId = id;
+      state.focusDate = state.pendingAddDate || state.focusDate;
+      state.selectedDate = state.pendingAddDate || state.focusDate;
+      showChildHome("agenda", "child");
+      state.selectedDate = state.pendingAddDate || state.focusDate;
+      openQuickAdd();
+    });
   }));
   openModal("#childPickerDialog");
 }
 
-function addFromFamily() {
+function addFromFamily(event) {
   if (!data.children.length) { startAddChild(); return; }
+  state.pendingAddDate = event?.currentTarget?.dataset.familyAddDate || state.familySelectedDate || state.familyFocusDate;
   if (data.children.length === 1) {
     state.childId = data.children[0].id;
-    showView("child");
+    state.focusDate = state.pendingAddDate || state.focusDate;
+    state.selectedDate = state.pendingAddDate || state.focusDate;
+    showChildHome("agenda", "child");
+    state.selectedDate = state.pendingAddDate || state.focusDate;
     openQuickAdd();
     return;
   }
   openChildPicker();
 }
 
+function openGuideTaskChoice() {
+  guide.awaiting = "item";
+  $("#guideOverlay").hidden = true;
+  if (!state.childId) state.childId = data.children[0]?.id || null;
+  if (!state.childId) { guide.next(); return; }
+  showChildHome("agenda", "child");
+  requestAnimationFrame(openQuickAdd);
+}
+
 const GUIDE_STEPS = [
-  { kind: "panel", title: "Bienvenue dans ÉCOLE", text: "On prépare l’appli ensemble en une minute : un enfant, une première action, puis je vous montre l’essentiel.", next: "C’est parti" },
+  { kind: "panel", title: "Bienvenue dans ÉCOLE", text: "On prépare l’appli ensemble en une minute : un enfant, une première action, puis les deux agendas.", next: "Créer le premier enfant" },
   { kind: "child" },
-  { kind: "item" },
-  { kind: "spot", prep: () => showChildHome("agenda", "child"), target: "#agendaAddButton", title: "Ajouter une tâche", text: "Ce bouton ouvre les 6 catégories — devoirs, contrôles, sorties, fournitures, rendez-vous, documents — pour ranger chaque tâche au bon endroit." },
-  { kind: "spot", target: "#agendaSection", title: "L’agenda de l’enfant", text: "Vue Gantt par jour, retards signalés en haut, et on coche une tâche dès qu’elle est faite." },
-  { kind: "spot", prep: () => showView("home"), target: "#familyAgendaSection", title: "L’agenda de la famille", text: "Sur l’accueil, cet agenda regroupe tout le monde et signale les retards de chacun." },
+  { kind: "spot", prep: () => showView("home"), target: "#childrenGrid", title: "Accueil familial", text: "Ici, chaque grande carte représente un enfant. Touchez une carte pour entrer dans son espace." },
+  { kind: "spot", prep: () => showChildHome("agenda", "child"), target: "#agendaSection", title: "L’agenda de l’enfant", text: "La semaine apparaît en Gantt vertical. Les tâches se voient dans le calendrier puis dans la liste dessous." },
+  { kind: "spot", target: "#agendaAddButton", title: "Ajouter une première tâche", text: "On choisit d’abord le hub : devoir, contrôle, sortie, fourniture, rendez-vous ou document.", next: "Choisir la catégorie", action: openGuideTaskChoice },
+  { kind: "spot", prep: () => showChildHome("list", "child"), target: "#agendaListSection", title: "Tâche enregistrée", text: "Après l’enregistrement, la tâche revient ici dans le Gantt et dans la liste. Vous pouvez la cocher quand elle est faite." },
+  { kind: "spot", prep: () => showView("home"), target: "#familyAgendaSection", title: "L’agenda de la famille", text: "Sur l’accueil, l’agenda regroupe tous les enfants et colore les tâches par enfant." },
   { kind: "panel", title: "C’est prêt !", text: "Tout est en place. Vous pourrez revoir ce guide à tout moment depuis les Réglages.", next: "Terminer" }
 ];
 
@@ -1467,7 +1529,7 @@ const guide = {
   active: false, review: false, i: 0, awaiting: null, steps: [],
   start(review = false) {
     this.review = review;
-    this.steps = review ? GUIDE_STEPS.filter(step => step.kind !== "child" && step.kind !== "item") : GUIDE_STEPS;
+    this.steps = review ? GUIDE_STEPS.filter(step => step.kind !== "child" && !step.action) : GUIDE_STEPS;
     if (review && !state.childId) state.childId = data.children[0]?.id || null;
     this.active = true;
     this.i = 0;
@@ -1524,7 +1586,17 @@ const guide = {
       bubble.style.top = "";
     }
   },
-  next() { this.i++; if (this.i >= this.steps.length) return this.finish(); this.show(); },
+  next() {
+    const step = this.steps[this.i];
+    if (step?.action) {
+      this.i++;
+      step.action();
+      return;
+    }
+    this.i++;
+    if (this.i >= this.steps.length) return this.finish();
+    this.show();
+  },
   skip() { this.finish(); },
   end(targetView) {
     this.active = false;
@@ -1545,10 +1617,10 @@ function bindEvents() {
   $("#addChildSettingsButton").addEventListener("click", () => openChildDialog());
   $("#backHomeButton").addEventListener("click", () => showView("home"));
   $("#profileBanner").addEventListener("click", openChildSummary);
-  $("#backAgendaButton").addEventListener("click", () => showChildHome("agenda"));
+  $("#backAgendaButton").addEventListener("click", cancelItemForm);
   $("#agendaAddButton").addEventListener("click", openQuickAdd);
   $("#itemForm").addEventListener("submit", saveItem);
-  $("#cancelItemButton").addEventListener("click", () => showChildHome("agenda"));
+  $("#cancelItemButton").addEventListener("click", cancelItemForm);
   $("#deleteInFormButton").addEventListener("click", () => requestDeleteItem($("#editingItemId").value));
   $("#summaryBackButton").addEventListener("click", closeItemSummary);
   $("#summaryCloseButton").addEventListener("click", closeItemSummary);
@@ -1570,6 +1642,13 @@ function bindEvents() {
   $("#childSummaryEditButton").addEventListener("click", editCurrentChildFromSummary);
   $("#childForm").addEventListener("submit", saveChild);
   $("#childDialog").addEventListener("close", () => { if (guide.active && guide.awaiting === "child") guide.stop(); });
+  $("#quickAddDialog").addEventListener("close", () => {
+    if (guide.active && guide.awaiting === "item" && !state.quickCategoryChosen) {
+      guide.awaiting = null;
+      showChildHome("agenda");
+      guide.next();
+    }
+  });
   $("#guideNext").addEventListener("click", () => guide.next());
   $("#guideSkip").addEventListener("click", () => guide.skip());
   $("#cancelChildButton").addEventListener("click", closeChildDialog);

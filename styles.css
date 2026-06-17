@@ -500,3 +500,83 @@ dialog::backdrop { background: rgba(18, 33, 61, .58); backdrop-filter: blur(3px)
 .guide-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
 .guide-skip { background: transparent; border: 0; color: var(--muted); font-size: 13px; font-weight: 700; padding: 8px; }
 .guide-next { min-height: 44px; border: 0; border-radius: 13px; padding: 8px 18px; background: var(--blue); color: white; font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 15px; }
+
+/* ===== Améliorations v3 ===== */
+.agenda-only-mode #backHomeButton,
+.agenda-only-mode #profileBanner {
+  display: none;
+}
+.agenda-only-mode #agendaSection {
+  margin-top: 0;
+  border-color: color-mix(in srgb, var(--accent) 35%, #b8daf5);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 10%, white), #edf8ff);
+}
+.agenda-only-mode #agendaSection .panel-heading {
+  padding: 3px 2px 5px;
+}
+.agenda-only-mode #agendaSection .panel-heading .eyebrow::after {
+  content: " détaillé";
+}
+.agenda-only-mode #agendaListSection {
+  border-color: color-mix(in srgb, var(--accent) 24%, #f2d491);
+}
+.child-mode.task-form-mode .fab {
+  display: none;
+}
+.child-mode .form-return-button,
+.form-return-button {
+  min-height: 66px;
+  border-radius: 20px;
+  padding: 14px 16px;
+  font-size: 18px;
+  line-height: 1.15;
+  background: color-mix(in srgb, var(--detail, var(--accent)) 16%, white);
+  color: var(--detail, var(--accent));
+}
+.date-zone input,
+.date-zone select {
+  min-height: 58px;
+  border-radius: 16px;
+  font-size: 18px;
+  line-height: 1.2;
+}
+.date-zone input[type="date"],
+.date-zone input[type="time"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gantt-task-row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 6px;
+  margin-left: calc(var(--shift, 0) * 18px);
+}
+.gantt-day-items .gantt-task {
+  margin-left: 0;
+}
+.gantt-check {
+  min-height: 44px;
+  border: 2px solid var(--event);
+  border-radius: 13px;
+  padding: 0;
+  background: white;
+  color: var(--event);
+  font-size: 14px;
+  font-weight: 900;
+}
+.gantt-task-row.done .gantt-check {
+  background: var(--event);
+  color: white;
+}
+.gantt-task-row.done .gantt-task strong {
+  text-decoration: line-through;
+}
+.quick-category {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  min-height: 96px;
+  font-size: 13px;
+}

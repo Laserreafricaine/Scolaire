@@ -11,7 +11,7 @@ const CATEGORIES = {
     label: "Devoirs", short: "Devoirs", icon: "✎", color: "#2457e6",
     eyebrow: "Le travail à faire", titleField: "work", subjectRef: "subjects",
     fields: [
-      ["subject", "Matière", "text", false, "Ex. Mathématiques", "subjects"],
+      ["subject", "Matière", "text", true, "Ex. Mathématiques", "subjects"],
       ["work", "Travail demandé", "text", true, "Ex. exercices 4 et 5 page 82"],
       ["manual", "Manuel, page ou exercice", "text", false, "Ex. page 82, exercice 4"],
       ["estimatedTime", "Temps estimé", "text", false, "Ex. 30 minutes"]
@@ -21,7 +21,7 @@ const CATEGORIES = {
     label: "Contrôles et notes", short: "Contrôles", icon: "✓", color: "#f02f78",
     eyebrow: "Évaluations et résultats", titleField: "topic", subjectRef: "subjects",
     fields: [
-      ["subject", "Matière", "text", false, "Ex. Français", "subjects"],
+      ["subject", "Matière", "text", true, "Ex. Français", "subjects"],
       ["topic", "Sujet ou chapitre", "text", true, "Ex. dictée, chapitre 6"],
       ["revision", "Révisions", "textarea", false, "Points à revoir"],
       ["score", "Note obtenue", "text", false, "Ex. 15"],
@@ -34,7 +34,7 @@ const CATEGORIES = {
     eyebrow: "Activités hors de l’école", titleField: "name",
     fields: [
       ["name", "Nom", "text", true, "Ex. visite du musée"],
-      ["location", "Lieu", "text", false, "Adresse ou lieu"],
+      ["location", "Lieu", "text", true, "Adresse ou lieu"],
       ["schedule", "Horaires", "text", false, "Ex. 8 h 30 - 16 h"],
       ["group", "Classe ou groupe", "text", false, "Ex. CM2 A"],
       ["companion", "Accompagnateur", "text", false, "Nom ou rôle"],
@@ -62,7 +62,7 @@ const CATEGORIES = {
     fields: [
       ["person", "Personne rencontrée", "text", true, "Ex. Mme Martin"],
       ["role", "Rôle", "text", false, "Ex. enseignante"],
-      ["reason", "Motif", "text", false, "Ex. bilan du trimestre"],
+      ["reason", "Motif", "text", true, "Ex. bilan du trimestre"],
       ["location", "Lieu", "text", false, "Ex. salle 12"],
       ["questions", "Questions", "textarea", false, "Questions à poser"],
       ["report", "Compte rendu", "textarea", false, "Notes après le rendez-vous"]
@@ -73,7 +73,7 @@ const CATEGORIES = {
     eyebrow: "École, administration et cantine", titleField: "documentType",
     fields: [
       ["documentType", "Type de document", "text", true, "Ex. Cantine", "documentTypes"],
-      ["service", "Service concerné", "text", false, "Ex. Administration", "services"],
+      ["service", "Service concerné", "text", true, "Ex. Administration", "services"],
       ["receivedDate", "Date de réception", "date", false],
       ["signatureRequired", "Signature nécessaire", "checkbox", false],
       ["submitted", "Remis", "checkbox", false]
@@ -215,6 +215,27 @@ function isDone(item) {
   return item.status === "done";
 }
 
+function isOverdue(item) {
+  return !isDone(item) && Boolean(item.date) && item.date < toISODate(new Date());
+}
+
+function eventColor(item) {
+  if (state.view === "home") {
+    const child = data.children.find(entry => entry.id === item.childId);
+    return child?.color || "#2457e6";
+  }
+  return CATEGORIES[item.category].color;
+}
+
+function refreshCurrentView() {
+  if (state.view === "home") renderHome();
+  else if (state.view === "child") renderChild();
+  else if (state.view === "settings") {
+    renderChildrenManagement();
+    renderSettings();
+  }
+}
+
 function itemTitle(item) {
   const config = CATEGORIES[item.category];
   return item.title || item.details?.[config?.titleField] || config?.label || "Élément scolaire";
@@ -238,16 +259,6 @@ function getUpcoming(childId, includeDone = false) {
 
 function sortItems(a, b) {
   return `${a.date || "9999"}T${a.time || "23:59"}`.localeCompare(`${b.date || "9999"}T${b.time || "23:59"}`);
-}
-
-function timeShift(time) {
-  if (!time) return 0;
-  const hour = Number(time.split(":")[0]);
-  if (Number.isNaN(hour)) return 0;
-  if (hour < 10) return 0;
-  if (hour < 13) return 10;
-  if (hour < 16) return 20;
-  return 30;
 }
 
 function getAlert(item) {
@@ -311,12 +322,14 @@ function renderHome() {
     grid.innerHTML = data.children.map(child => {
       const upcoming = getUpcoming(child.id);
       const next = upcoming[0];
+      const overdueCount = childItems(child.id).filter(isOverdue).length;
       const alert = getAlerts(child.id)[0];
       return `<button class="child-card" style="--child:${child.color}" data-open-child="${child.id}" type="button">
         ${avatarHTML(child)}
         <span class="child-info"><strong>${escapeHTML(child.name)}</strong><small>${escapeHTML(child.className)} · ${escapeHTML(child.school)}</small><span class="child-teacher">${escapeHTML(child.teacher || "Enseignant non renseigné")}</span></span>
         <span class="child-summary"><b>${upcoming.length}</b> élément${upcoming.length > 1 ? "s" : ""} à venir<span>${next ? `Prochain : ${escapeHTML(itemTitle(next))} · ${formatDate(next.date)}` : "Rien de prévu"}</span></span>
-        ${alert ? `<span class="child-alert">${escapeHTML(getAlert(alert).text)} · ${escapeHTML(itemTitle(alert))}</span>` : ""}
+        ${overdueCount ? `<span class="child-overdue">⚠ ${overdueCount} en retard</span>` : ""}
+        ${alert && !overdueCount ? `<span class="child-alert">${escapeHTML(getAlert(alert).text)} · ${escapeHTML(itemTitle(alert))}</span>` : ""}
         ${child.schoolPhone ? `<span class="child-school-phone">Tel. ecole : ${escapeHTML(child.schoolPhone)}</span>` : ""}
         <span class="enter-child-hint">Entrer dans son espace</span>
       </button>`;
@@ -343,14 +356,14 @@ function updateChildrenDots() {
 
 function openChild(id) {
   state.childId = id;
-  state.selectedDate = null;
-  state.calendarView = "gantt";
-  state.activeNav = "child";
-  showView("child");
+  state.filter = "all";
+  showChildHome("top", "child");
 }
 
 function showChildHome(scrollTarget = "top", nav = "child") {
   state.activeNav = nav;
+  state.calendarView = "gantt";
+  state.selectedDate = null;
   $("#categorySection").hidden = true;
   $("#agendaSection").hidden = false;
   $("#schoolCards").hidden = true;
@@ -368,6 +381,7 @@ function renderChild() {
     return;
   }
   const upcoming = getUpcoming(child.id);
+  $("#childView").style.setProperty("--accent", child.color || "#2457e6");
   $("#profileBanner").style.setProperty("--child", child.color);
   $("#profileBanner").innerHTML = `${avatarHTML(child)}<span><p class="eyebrow">Son espace scolaire</p><h2>${escapeHTML(child.name)}</h2><small>${escapeHTML(child.className)} · ${escapeHTML(child.school)}</small><small>${escapeHTML(child.teacher || "Enseignant non renseigné")}</small></span><span class="profile-count">${upcoming.length} à venir</span>`;
   $("#profileBanner").setAttribute("aria-label", `Ouvrir la carte de ${child.name}`);
@@ -489,7 +503,7 @@ function renderFamilyAgenda() {
   }));
   $$("[data-family-gantt-item]", $("#familyCalendar")).forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
-    openItemSummary(button.dataset.familyGanttItem);
+    editItemFromAnywhere(button.dataset.familyGanttItem);
   }));
   renderFamilyFilters();
   renderFamilyAgendaList(start, end);
@@ -500,7 +514,7 @@ function familyCalendarDayHTML(date, monthMode = false, activeMonth = null) {
   const events = data.items.filter(item => item.date === iso);
   const selected = state.familySelectedDate === iso || (!state.familySelectedDate && iso === state.familyFocusDate);
   const outside = monthMode && date.getMonth() !== activeMonth;
-  const dots = events.slice(0, 6).map(item => `<i style="--dot:${CATEGORIES[item.category].color}"></i>`).join("");
+  const dots = events.slice(0, 6).map(item => `<i style="--dot:${data.children.find(entry => entry.id === item.childId)?.color || "#2457e6"}"></i>`).join("");
   if (monthMode) return `<button class="month-day ${selected ? "selected" : ""} ${outside ? "outside" : ""}" data-family-calendar-date="${iso}" type="button">${date.getDate()}<span class="day-dots">${dots}</span></button>`;
   return `<button class="calendar-day ${selected ? "selected" : ""}" data-family-calendar-date="${iso}" type="button"><small>${formatDate(date, { weekday: "short" })}</small><strong>${date.getDate()}</strong><span class="day-dots">${dots}</span></button>`;
 }
@@ -511,26 +525,18 @@ function renderFamilyGantt(start, end) {
     .filter(item => state.familyFilter === "all" || item.category === state.familyFilter)
     .sort(sortItems);
   const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
-  const rows = days.map(date => {
-    const iso = toISODate(date);
-    const dayItems = items.filter(item => item.date === iso);
-    const today = iso === toISODate(new Date());
-    const content = dayItems.length ? dayItems.map(item => {
-      const child = data.children.find(entry => entry.id === item.childId);
-      const category = CATEGORIES[item.category];
-      return `<button class="gantt-task ${isDone(item) ? "done" : ""}" data-family-gantt-item="${item.id}" style="--event:${category.color};--shift:${timeShift(item.time)}px" type="button">
-        <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(child?.name || "")}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
-      </button>`;
-    }).join("") : `<button class="gantt-empty-day" data-family-calendar-date="${iso}" type="button">Aucune tâche<br><small>Toucher pour ce jour</small></button>`;
-    return `<article class="gantt-day ${today ? "today" : ""}">
-      <button class="gantt-day-head" data-family-calendar-date="${iso}" type="button">
-        <span>${formatDate(date, { weekday: "short" })}</span><strong>${date.getDate()}</strong>
-      </button>
-      <div class="gantt-day-items">${content}</div>
-    </article>`;
-  }).join("");
+  const rows = items.length ? items.map(item => {
+    const child = data.children.find(entry => entry.id === item.childId);
+    const dayIndex = Math.max(0, Math.round((fromISO(item.date) - start) / 86400000));
+    const category = CATEGORIES[item.category];
+    return `<div class="gantt-row">
+      <span class="gantt-label"><b>${escapeHTML(child?.name || "")}</b><small>${escapeHTML(itemTitle(item))}</small></span>
+      ${days.map(date => `<button class="gantt-cell ${toISODate(date) === toISODate(new Date()) ? "today" : ""}" data-family-calendar-date="${toISODate(date)}" type="button"></button>`).join("")}
+      <button class="gantt-bar" data-family-gantt-item="${item.id}" style="--event:${child?.color || category.color};--day-index:${dayIndex}" type="button">${category.icon} ${escapeHTML(child?.name || "")}</button>
+    </div>`;
+  }).join("") : `<div class="gantt-row"><span class="gantt-label">Aucun élément</span>${days.map(date => `<button class="gantt-cell" data-family-calendar-date="${toISODate(date)}" type="button"></button>`).join("")}</div>`;
   $("#familyCalendar").className = "calendar gantt-calendar";
-  $("#familyCalendar").innerHTML = `<div class="gantt-board gantt-vertical">${rows}</div>`;
+  $("#familyCalendar").innerHTML = `<div class="gantt-board"><div class="gantt-head"><span>Enfant · élément</span>${days.map(date => `<span>${formatDate(date, { weekday: "short" })}<br>${date.getDate()}</span>`).join("")}</div>${rows}</div>`;
 }
 
 function renderFamilyFilters() {
@@ -540,6 +546,48 @@ function renderFamilyFilters() {
     state.familyFilter = button.dataset.familyFilter;
     renderFamilyAgenda();
   }));
+}
+
+function eventItemHTML(item, secondaryName = "") {
+  const category = CATEGORIES[item.category];
+  const done = isDone(item);
+  const overdue = isOverdue(item);
+  const meta = [secondaryName, itemDetails(item), item.time || "", done ? "terminé" : (overdue ? "en retard" : "")].filter(Boolean).join(" · ");
+  return `<div class="event-row ${done ? "done" : ""} ${overdue ? "overdue" : ""}" style="--event:${eventColor(item)}">
+    <button class="event-check" data-toggle-item="${item.id}" type="button" aria-label="${done ? "Décocher" : "Marquer comme fait"}">${done ? "✓" : ""}</button>
+    <button class="event ${done ? "done" : ""} ${overdue ? "urgent-event" : ""}" style="--event:${eventColor(item)}" data-open-item="${item.id}" type="button">
+      <span class="event-date"><b>${fromISO(item.date).getDate()}</b><small>${formatDate(item.date, { month: "short" }).toUpperCase()}</small></span>
+      <span class="event-body"><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(meta)}</small></span>
+      <span class="event-tag">${category.short}</span>
+    </button>
+  </div>`;
+}
+
+function overdueItemHTML(item) {
+  const category = CATEGORIES[item.category];
+  const done = isDone(item);
+  const meta = [itemDetails(item), item.time || ""].filter(Boolean).join(" · ");
+  return `<div class="overdue-item ${done ? "done" : ""}" style="--event:${eventColor(item)}">
+    <button class="event-check" data-toggle-item="${item.id}" type="button" aria-label="${done ? "Décocher" : "Marquer comme fait"}">${done ? "✓" : ""}</button>
+    <button class="event urgent-event ${done ? "done" : ""}" style="--event:${eventColor(item)}" data-open-item="${item.id}" type="button">
+      <span class="event-date"><b>${fromISO(item.date).getDate()}</b><small>${formatDate(item.date, { month: "short" }).toUpperCase()}</small></span>
+      <span class="event-body"><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(meta || category.short)}</small></span>
+      <span class="event-tag">${category.short}</span>
+    </button>
+    <button class="reschedule-button" data-reschedule-item="${item.id}" type="button">↻ Reporter</button>
+  </div>`;
+}
+
+function detailItemHTML(item) {
+  const category = CATEGORIES[state.category];
+  const done = isDone(item);
+  const overdue = isOverdue(item);
+  return `<article class="detail-item ${done ? "done" : ""} ${overdue ? "overdue" : ""}">
+    <button class="check-button" data-toggle-item="${item.id}" type="button" aria-label="${done ? "Décocher" : "Marquer comme fait"}">${done ? "✓" : ""}</button>
+    <span><strong class="item-title">${escapeHTML(itemTitle(item))}</strong><small class="item-meta">${overdue ? "⚠ en retard · " : ""}${formatDate(item.date, { weekday: "short", day: "numeric", month: "long" })}${item.time ? ` · ${escapeHTML(item.time)}` : ""}${item.reminder && item.reminder !== "Aucun" ? ` · rappel ${escapeHTML(item.reminder.toLowerCase())}` : ""}</small></span>
+    <span class="event-tag" style="--event:${category.color}">${category.short}</span>
+    <span class="item-actions"><button class="edit-button" data-edit-item="${item.id}" type="button">Modifier</button><button class="delete-button" data-delete-item="${item.id}" type="button">Supprimer</button></span>
+  </article>`;
 }
 
 function renderFamilyAgendaList(periodStart, periodEnd) {
@@ -553,15 +601,10 @@ function renderFamilyAgendaList(periodStart, periodEnd) {
   $("#familyListCount").textContent = `${items.length} élément${items.length > 1 ? "s" : ""}`;
   $("#familyAgendaList").innerHTML = items.length ? items.map(item => {
     const child = data.children.find(entry => entry.id === item.childId);
-    const category = CATEGORIES[item.category];
-    const alert = getAlert(item);
-    return `<button class="event ${isDone(item) ? "done" : ""} ${alert?.level === "urgent" ? "urgent-event" : ""}" style="--event:${category.color}" data-family-item="${item.id}" type="button">
-      <span class="event-date"><b>${fromISO(item.date).getDate()}</b><small>${formatDate(item.date, { month: "short" }).toUpperCase()}</small></span>
-      <span><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(child?.name || "")} · ${escapeHTML(itemDetails(item))}${alert ? ` · ${escapeHTML(alert.text)}` : ""}</small></span>
-      <span class="event-tag">${category.short}</span>
-    </button>`;
+    return eventItemHTML(item, child?.name || "");
   }).join("") : `<div class="empty-state"><strong>Aucun élément</strong>Rien n’est prévu pour cette période.</div>`;
-  $$("[data-family-item]", $("#familyAgendaList")).forEach(button => button.addEventListener("click", () => openItemSummary(button.dataset.familyItem)));
+  $$("[data-open-item]", $("#familyAgendaList")).forEach(button => button.addEventListener("click", () => openItemSummary(button.dataset.openItem)));
+  $$("[data-toggle-item]", $("#familyAgendaList")).forEach(button => button.addEventListener("click", () => toggleItem(button.dataset.toggleItem)));
 }
 
 function calendarDayHTML(date, monthMode = false, activeMonth = null) {
@@ -586,7 +629,7 @@ function renderGantt(start, end) {
     const today = iso === toISODate(new Date());
     const content = dayItems.length ? dayItems.map(item => {
       const category = CATEGORIES[item.category];
-      return `<button class="gantt-task ${isDone(item) ? "done" : ""}" data-gantt-item="${item.id}" style="--event:${category.color};--shift:${timeShift(item.time)}px" type="button">
+      return `<button class="gantt-task ${isDone(item) ? "done" : ""}" data-gantt-item="${item.id}" style="--event:${category.color}" type="button">
         <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${category.short}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
       </button>`;
     }).join("") : `<button class="gantt-empty-day" data-calendar-date="${iso}" type="button">Aucune tâche<br><small>Toucher pour ajouter</small></button>`;
@@ -613,23 +656,26 @@ function renderFilters() {
 function renderAgendaList(periodStart, periodEnd) {
   const startISO = toISODate(periodStart);
   const endISO = toISODate(periodEnd);
-  const items = childItems()
+  const periodItems = childItems()
     .filter(item => item.date && item.date >= startISO && item.date <= endISO)
     .filter(item => state.filter === "all" || item.category === state.filter)
+    .filter(item => !isOverdue(item))
     .sort(sortItems);
-  $("#agendaCount").textContent = `${items.length} élément${items.length > 1 ? "s" : ""}`;
-  $("#agendaList").innerHTML = items.length ? items.map(item => {
-    const category = CATEGORIES[item.category];
-    return `<button class="event ${isDone(item) ? "done" : ""}" style="--event:${category.color}" data-agenda-item="${item.id}" type="button">
-      <span class="event-date"><b>${fromISO(item.date).getDate()}</b><small>${formatDate(item.date, { month: "short" }).toUpperCase()}</small></span>
-      <span><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(itemDetails(item))}${item.time ? ` · ${escapeHTML(item.time)}` : ""}${isDone(item) ? " · terminé" : ""}</small></span>
-      <span class="event-tag">${category.short}</span>
-    </button>`;
-  }).join("") : `<button class="empty-state empty-action" id="emptyAgendaAction" type="button"><strong>Aucune tâche</strong>Toucher pour choisir une catégorie.</button>`;
-  $$("[data-agenda-item]", $("#agendaList")).forEach(button => button.addEventListener("click", () => {
-    const item = data.items.find(entry => entry.id === button.dataset.agendaItem);
-    openItemSummary(item.id);
-  }));
+  const overdueItems = childItems()
+    .filter(isOverdue)
+    .filter(item => state.filter === "all" || item.category === state.filter)
+    .sort(sortItems);
+  $("#agendaCount").textContent = `${periodItems.length} élément${periodItems.length > 1 ? "s" : ""}`;
+  const overdueBlock = overdueItems.length ? `<div class="overdue-block">
+    <div class="overdue-head">⚠ En retard <span>${overdueItems.length}</span></div>
+    ${overdueItems.map(overdueItemHTML).join("")}
+  </div>` : "";
+  const periodBlock = periodItems.length ? periodItems.map(item => eventItemHTML(item)).join("")
+    : (overdueItems.length ? "" : `<button class="empty-state empty-action" id="emptyAgendaAction" type="button"><strong>Aucune tâche</strong>Toucher pour choisir une catégorie.</button>`);
+  $("#agendaList").innerHTML = overdueBlock + periodBlock;
+  $$("[data-open-item]", $("#agendaList")).forEach(button => button.addEventListener("click", () => openItemSummary(button.dataset.openItem)));
+  $$("[data-toggle-item]", $("#agendaList")).forEach(button => button.addEventListener("click", () => toggleItem(button.dataset.toggleItem)));
+  $$("[data-reschedule-item]", $("#agendaList")).forEach(button => button.addEventListener("click", () => openReschedule(button.dataset.rescheduleItem)));
   $("#emptyAgendaAction")?.addEventListener("click", openQuickAdd);
 }
 
@@ -685,24 +731,23 @@ function renderCategory() {
   $("#categoryListTitle").textContent = category.label;
   $("#categoryListCount").textContent = items.length;
   buildItemFields(category);
-  $("#categoryList").innerHTML = items.length ? items.map(item => `<article class="detail-item ${isDone(item) ? "done" : ""}">
-    <button class="check-button" data-toggle-item="${item.id}" type="button" aria-label="Cocher l’élément">${isDone(item) ? "✓" : ""}</button>
-    <span><strong class="item-title">${escapeHTML(itemTitle(item))}</strong><small class="item-meta">${formatDate(item.date, { weekday: "short", day: "numeric", month: "long" })}${item.time ? ` · ${escapeHTML(item.time)}` : ""}${item.reminder && item.reminder !== "Aucun" ? ` · rappel ${escapeHTML(item.reminder.toLowerCase())}` : ""}</small></span>
-    <span class="event-tag" style="--event:${category.color}">${category.short}</span>
-    <span class="item-actions"><button class="edit-button" data-edit-item="${item.id}" type="button">Modifier</button><button class="delete-button" data-delete-item="${item.id}" type="button">Supprimer</button></span>
-  </article>`).join("") : `<div class="empty-state"><strong>Aucun élément</strong>Utilisez le formulaire pour ajouter le premier.</div>`;
+  const active = items.filter(item => !isDone(item));
+  const done = items.filter(isDone);
+  const activeBlock = active.length ? active.map(detailItemHTML).join("")
+    : (done.length ? "" : `<div class="empty-state"><strong>Aucun élément</strong>Utilisez le formulaire pour ajouter le premier.</div>`);
+  const doneBlock = done.length ? `<details class="done-group">
+    <summary>Terminé <span>${done.length}</span></summary>
+    <div class="detail-list done-list">${done.map(detailItemHTML).join("")}</div>
+  </details>` : "";
+  $("#categoryList").innerHTML = activeBlock + doneBlock;
   $$("[data-toggle-item]", $("#categoryList")).forEach(button => button.addEventListener("click", () => toggleItem(button.dataset.toggleItem)));
   $$("[data-edit-item]", $("#categoryList")).forEach(button => button.addEventListener("click", () => fillItemForm(data.items.find(item => item.id === button.dataset.editItem))));
   $$("[data-delete-item]", $("#categoryList")).forEach(button => button.addEventListener("click", () => requestDeleteItem(button.dataset.deleteItem)));
 }
 
 function buildItemFields(category) {
-  const requiredFields = category.fields.filter(field => field[3]);
-  const main = [...requiredFields];
-  category.fields.forEach(field => {
-    if (main.length < 2 && !main.some(entry => entry[0] === field[0])) main.push(field);
-  });
-  const extras = category.fields.filter(field => !main.some(entry => entry[0] === field[0]));
+  const main = category.fields.slice(0, 2);
+  const extras = category.fields.slice(2);
   $("#mainFields").innerHTML = main.map(fieldHTML).join("");
   $("#extraFields").innerHTML = extras.map(fieldHTML).join("");
   $("#dateFields").innerHTML = [
@@ -711,8 +756,9 @@ function buildItemFields(category) {
     `<fieldset class="button-choice-field field full"><legend>Rappel</legend><input data-item-field="reminder" type="hidden"><div class="choice-buttons reminder-choice-buttons">${data.refs.reminderOptions.map(option => `<button data-reminder-choice="${escapeHTML(option)}" type="button">${escapeHTML(option)}</button>`).join("")}</div></fieldset>`
   ].join("");
   $("#moreFieldsPanel").hidden = !extras.length;
-  const suggestions = state.category === "meetings" ? [] : category.subjectRef ? data.refs[category.subjectRef] : data.refs.suggestions;
-  const suggestionTarget = state.category === "supplies" ? '[data-item-field="use"]' : category.subjectRef ? '[data-item-field="subject"]' : "[data-item-field]";
+  const noSuggestions = ["meetings", "trips", "documents"];
+  const suggestions = noSuggestions.includes(state.category) ? [] : category.subjectRef ? data.refs[category.subjectRef] : data.refs.suggestions;
+  const suggestionTarget = state.category === "supplies" ? '[data-item-field="use"]' : "[data-item-field]";
   $("#suggestionBox").hidden = !suggestions?.length;
   $("#suggestions").innerHTML = (suggestions || []).slice(0, 8).map(value => `<button data-suggestion="${escapeHTML(value)}" type="button">${escapeHTML(value)}</button>`).join("");
   $$("[data-suggestion]", $("#suggestions")).forEach(button => button.addEventListener("click", () => {
@@ -836,8 +882,42 @@ function toggleItem(id) {
   item.updatedAt = nowISO();
   syncDetailsFromStatus(item);
   saveData();
-  renderCategory();
+  refreshCurrentView();
   showToast(isDone(item) ? "Élément terminé." : "Élément réactivé.");
+}
+
+function openReschedule(id) {
+  const item = data.items.find(entry => entry.id === id);
+  if (!item) return;
+  $("#rescheduleDialog").dataset.itemId = id;
+  $("#rescheduleMessage").textContent = `« ${itemTitle(item)} » est en retard. Choisissez une nouvelle date.`;
+  $("#rescheduleDate").value = toISODate(new Date());
+  $("#rescheduleDialog").showModal();
+}
+
+function applyReschedule(date) {
+  const id = $("#rescheduleDialog").dataset.itemId;
+  const item = data.items.find(entry => entry.id === id);
+  if (!item || !date) return;
+  item.date = date;
+  item.updatedAt = nowISO();
+  saveData();
+  $("#rescheduleDialog").close();
+  refreshCurrentView();
+  showToast("Tâche reportée.");
+}
+
+function requestDeleteItemFromSummary() {
+  const id = $("#itemSummaryDialog").dataset.itemId;
+  const item = data.items.find(entry => entry.id === id);
+  if (!item) return;
+  closeItemSummary();
+  askConfirm("Supprimer cette tâche ?", `« ${itemTitle(item)} » sera supprimée définitivement.`, () => {
+    data.items = data.items.filter(entry => entry.id !== id);
+    saveData();
+    refreshCurrentView();
+    showToast("Tâche supprimée.");
+  });
 }
 
 function requestDeleteItem(id) {
@@ -1297,6 +1377,14 @@ function bindEvents() {
     closeItemSummary();
     editItemFromAnywhere(id);
   });
+  $("#summaryDeleteButton").addEventListener("click", requestDeleteItemFromSummary);
+  $("#fabAddButton").addEventListener("click", openQuickAdd);
+  $("#rescheduleCancel").addEventListener("click", () => $("#rescheduleDialog").close("cancel"));
+  $("#rescheduleConfirm").addEventListener("click", () => applyReschedule($("#rescheduleDate").value));
+  $$("[data-reschedule]", $("#rescheduleDialog")).forEach(button => button.addEventListener("click", () => {
+    const today = new Date();
+    applyReschedule(toISODate(button.dataset.reschedule === "tomorrow" ? addDays(today, 1) : today));
+  }));
   $("#childSummaryBackButton").addEventListener("click", closeChildSummary);
   $("#childSummaryCloseButton").addEventListener("click", closeChildSummary);
   $("#childSummaryEditButton").addEventListener("click", editCurrentChildFromSummary);

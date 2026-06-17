@@ -48,13 +48,13 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .home-heading h1 { font-size: 28px; }
 
 .children-grid {
-  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(278px, 88%);
-  gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 5px 2px 12px; scrollbar-width: none;
+  display: grid; grid-template-columns: 1fr;
+  gap: 14px; overflow: visible; padding: 5px 2px 12px;
 }
 .children-grid::-webkit-scrollbar { display: none; }
 .child-card {
   --child: var(--blue);
-  min-height: 470px; scroll-snap-align: center; display: grid; grid-template-columns: 76px 1fr; align-content: start; gap: 14px;
+  min-height: 430px; display: grid; grid-template-columns: 76px 1fr; align-content: start; gap: 14px;
   border: 0; border-radius: 30px; padding: 22px;
   background: linear-gradient(160deg, color-mix(in srgb, var(--child) 16%, white), white 55%);
   color: var(--ink); text-align: left; box-shadow: var(--shadow);
@@ -76,7 +76,7 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .child-school-phone { grid-column: 1 / -1; border-radius: 15px; padding: 10px 12px; background: #edf7ff; color: var(--child); font-size: 14px; font-weight: 800; }
 .child-alert { grid-column: 1 / -1; border-radius: 16px; padding: 11px 12px; background: #fff0f1; color: var(--danger); font-size: 14px; font-weight: 800; }
 .enter-child-hint { grid-column: 1 / -1; align-self: end; min-height: 50px; display: grid; place-items: center; border-radius: 15px; background: var(--child); color: white; font: 800 16px "Baloo 2", sans-serif; }
-.carousel-dots { display: flex; justify-content: center; gap: 7px; margin: 2px 0 14px; }
+.carousel-dots { display: none; justify-content: center; gap: 7px; margin: 2px 0 14px; }
 .carousel-dots span { width: 8px; height: 8px; border-radius: 999px; background: #bed0e8; }
 .carousel-dots span.active { width: 24px; background: var(--blue); }
 .family-agenda { margin-top: 14px; border-color: #efd591; background: #fff8df; }
@@ -180,7 +180,6 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .gantt-day-items { display: grid; gap: 6px; }
 .gantt-task {
   min-height: 44px; display: grid; grid-template-columns: 30px 1fr; align-items: center; gap: 7px;
-  margin-left: var(--shift, 0); width: calc(100% - var(--shift, 0px));
   border: 0; border-radius: 13px; padding: 7px 9px; background: var(--event); color: white; text-align: left;
 }
 .gantt-task.done { opacity: .6; }
@@ -268,10 +267,7 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .form-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 11px; }
 .form-actions.editing { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .form-actions .primary-button { width: 100%; }
-.form-return-button {
-  width: 100%; min-height: 64px; margin-bottom: 16px; border-radius: 20px; padding: 12px 16px;
-  background: var(--blue); color: white; font-size: 18px; line-height: 1.1; box-shadow: 0 10px 22px rgba(36, 87, 230, .2);
-}
+.form-return-button { width: 100%; min-height: 52px; margin-bottom: 13px; border-radius: 16px; font-size: 15px; }
 .detail-list-head { margin: 19px 2px 9px; }
 .detail-list-head p { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
 .detail-list { display: grid; gap: 8px; }
@@ -365,8 +361,8 @@ dialog::backdrop { background: rgba(18, 33, 61, .58); backdrop-filter: blur(3px)
 
 @media (max-width: 390px) {
   .app { padding-left: 9px; padding-right: 9px; }
-  .children-grid { grid-template-columns: none; }
-  .child-card { min-height: 450px; }
+  .children-grid { grid-template-columns: 1fr; }
+  .child-card { min-height: 430px; }
   .profile-banner { grid-template-columns: 42px 1fr auto; }
   .profile-count { grid-column: auto; justify-self: auto; }
   .school-card { min-height: 96px; padding: 7px; }
@@ -387,3 +383,75 @@ dialog::backdrop { background: rgba(18, 33, 61, .58); backdrop-filter: blur(3px)
   .settings-actions { grid-template-columns: 1fr; }
   .quick-category-grid { grid-template-columns: 1fr; }
 }
+
+/* ===== Améliorations v2 ===== */
+:root { --accent: var(--blue); }
+#childView { --accent: var(--blue); }
+
+/* 1. couleur de l'enfant sur les éléments neutres (vue enfant uniquement) */
+#childView .primary-button, #childView .primary-small { background: var(--accent); }
+#childView .secondary-button, #childView .today-button { color: var(--accent); }
+#childView .calendar-arrow { color: var(--accent); }
+#childView .view-switch button.active { color: var(--accent); }
+#childView .filter-row button.active { border-color: var(--accent); background: var(--accent); }
+#childView .calendar-day.selected, #childView .month-day.selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, white); color: var(--accent); }
+#childView .day-calendar strong, #childView .day-calendar small { color: var(--accent); }
+#childView .gantt-day.today { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, white); }
+#childView .gantt-day-head { color: var(--accent); }
+#childView .gantt-day.today .gantt-day-head { background: var(--accent); color: white; }
+#childView .gantt-cell.today { background: color-mix(in srgb, var(--accent) 8%, white); }
+#childView .more-fields summary { color: var(--accent); }
+
+/* 5. bouton « Tous les enfants » nettement plus visible */
+#backHomeButton, .child-mode #backHomeButton {
+  min-height: 48px; margin-bottom: 12px; padding: 11px 18px; font-size: 15px;
+  background: color-mix(in srgb, var(--accent) 15%, white); color: var(--accent);
+}
+
+/* 4. bouton flottant */
+.fab { display: none; }
+.child-mode .fab {
+  position: fixed; z-index: 30; right: max(16px, env(safe-area-inset-right));
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  width: 60px; height: 60px; display: grid; place-items: center;
+  border: 0; border-radius: 20px; background: var(--accent); color: white;
+  font-size: 32px; font-weight: 800; line-height: 1; box-shadow: 0 12px 26px rgba(30,70,120,.3);
+}
+.keyboard-open .fab { display: none; }
+
+/* 6. cocher une tâche dans les listes d'agenda */
+.event-row, .overdue-item { display: grid; grid-template-columns: 30px 1fr; align-items: center; gap: 8px; }
+.event-check {
+  width: 26px; height: 26px; align-self: center; justify-self: center;
+  border: 2px solid var(--event); border-radius: 8px; padding: 0;
+  background: white; color: white; font-weight: 900; font-size: 14px;
+}
+.event-row.done .event-check, .overdue-item.done .event-check { background: var(--event); }
+.event-body { min-width: 0; }
+.event-row.done .event { opacity: .6; }
+.event-row.done .event strong, .event.done strong { text-decoration: line-through; }
+.event.urgent-event { border-left-color: var(--danger); }
+
+/* 7. bloc « En retard » épinglé + report rapide */
+.overdue-block { margin-bottom: 12px; border: 1px solid #f4bcc3; border-radius: 16px; padding: 9px; background: #fff4f5; }
+.overdue-head { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; color: var(--danger); font: 800 13px "Baloo 2", sans-serif; }
+.overdue-head span { min-width: 22px; height: 22px; display: grid; place-items: center; border-radius: 999px; padding: 0 6px; background: var(--danger); color: white; font-size: 11px; }
+.overdue-item { margin-bottom: 8px; }
+.overdue-item:last-child { margin-bottom: 0; }
+.reschedule-button { grid-column: 1 / -1; min-height: 40px; border: 1px solid #f1b6bd; border-radius: 12px; background: white; color: var(--danger); font-size: 13px; font-weight: 800; }
+.reschedule-quick { margin: 4px 0 12px; }
+.reschedule-quick button { flex: 1 1 0; }
+
+/* compteur « en retard » sur la carte enfant */
+.child-overdue { grid-column: 1 / -1; border-radius: 16px; padding: 11px 12px; background: #ffe7ea; color: var(--danger); font-size: 14px; font-weight: 800; }
+
+/* terminés repliables dans les hubs */
+.done-group { margin-top: 8px; border: 1px solid var(--line); border-radius: 14px; background: #f6f8fb; }
+.done-group summary { display: flex; align-items: center; gap: 7px; min-height: 46px; padding: 11px 13px; color: var(--muted); font-weight: 800; cursor: pointer; }
+.done-group summary span { min-width: 22px; height: 22px; display: grid; place-items: center; border-radius: 999px; padding: 0 6px; background: #dde6f0; color: var(--muted); font-size: 11px; }
+.done-list { padding: 0 10px 10px; }
+.detail-item.overdue { border-left-color: var(--danger); }
+.detail-item.overdue .item-meta { color: var(--danger); }
+
+/* fiche d'une tâche : Retour · Modifier · Supprimer */
+.item-summary-card .item-summary-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }

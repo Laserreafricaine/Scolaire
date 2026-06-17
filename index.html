@@ -129,6 +129,7 @@
         </div>
         <div class="detail-list" id="categoryList"></div>
       </section>
+      <button class="fab" id="fabAddButton" type="button" aria-label="Ajouter un élément">+</button>
     </section>
 
     <section id="settingsView" class="view" hidden>
@@ -201,9 +202,10 @@
       </div>
       <div class="summary-main" id="summaryMain"></div>
       <div class="summary-details" id="summaryDetails"></div>
-      <div class="form-actions">
-        <button class="secondary-button" id="summaryBackButton" type="button">Retour à l’agenda</button>
+      <div class="form-actions item-summary-actions">
+        <button class="secondary-button" id="summaryBackButton" type="button">Retour</button>
         <button class="primary-button" id="summaryEditButton" type="button">Modifier</button>
+        <button class="danger-button" id="summaryDeleteButton" type="button">Supprimer</button>
       </div>
     </form>
   </dialog>
@@ -219,6 +221,22 @@
       <div class="form-actions">
         <button class="secondary-button" id="childSummaryBackButton" type="button">Retour</button>
         <button class="primary-button" id="childSummaryEditButton" type="button">Modifier</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="rescheduleDialog">
+    <form method="dialog" class="dialog-card compact-dialog">
+      <div class="dialog-heading"><div><p class="eyebrow">Tâche en retard</p><h2>Reporter</h2></div><button class="dialog-close" value="cancel" aria-label="Fermer">×</button></div>
+      <p id="rescheduleMessage"></p>
+      <div class="choice-buttons reschedule-quick">
+        <button type="button" data-reschedule="today">Aujourd’hui</button>
+        <button type="button" data-reschedule="tomorrow">Demain</button>
+      </div>
+      <label class="field"><span>Choisir une date</span><input id="rescheduleDate" type="date"></label>
+      <div class="form-actions">
+        <button class="secondary-button" id="rescheduleCancel" type="button">Annuler</button>
+        <button class="primary-button" id="rescheduleConfirm" type="button">Reporter</button>
       </div>
     </form>
   </dialog>

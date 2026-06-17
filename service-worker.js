@@ -1,4 +1,4 @@
-const CACHE_NAME = "ecole-v1-20260615-10";
+const CACHE_NAME = "ecole-v1-20260617-1";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -6,7 +6,9 @@ const APP_FILES = [
   "./app.js",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icons/icon-512.png",
+  "./assets/avatars/afrique_ado_garcon.webp",
+  "./assets/avatars/afrique_fillette.webp"
 ];
 
 self.addEventListener("install", event => {

@@ -44,25 +44,40 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .empty-state { padding: 24px 14px; border: 1px dashed #b9cde0; border-radius: 18px; color: var(--muted); font-size: 14px; line-height: 1.4; text-align: center; }
 .empty-state strong { display: block; margin-bottom: 5px; color: var(--ink); font-size: 16px; }
 
-.children-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.home-heading { align-items: flex-start; }
+.home-heading h1 { font-size: 28px; }
+
+.children-grid {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(278px, 88%);
+  gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 5px 2px 12px; scrollbar-width: none;
+}
+.children-grid::-webkit-scrollbar { display: none; }
 .child-card {
   --child: var(--blue);
-  min-height: 210px; display: grid; grid-template-columns: 58px 1fr; align-content: start; gap: 11px;
-  border: 2px solid transparent; border-radius: 22px; padding: 14px; background: var(--surface); color: var(--ink); text-align: left; box-shadow: var(--shadow);
+  min-height: 470px; scroll-snap-align: center; display: grid; grid-template-columns: 76px 1fr; align-content: start; gap: 14px;
+  border: 0; border-radius: 30px; padding: 22px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--child) 16%, white), white 55%);
+  color: var(--ink); text-align: left; box-shadow: var(--shadow);
 }
-.child-card:active { border-color: var(--child); transform: translateY(1px); }
+.child-card:active { transform: translateY(1px) scale(.995); }
+.child-card .avatar { width: 72px; height: 72px; border-radius: 24px; font-size: 26px; }
 .avatar {
   width: 58px; height: 58px; display: grid; place-items: center; overflow: hidden; border-radius: 19px;
   background: var(--child); color: white; font: 800 18px "Baloo 2", sans-serif;
 }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
-.child-info strong { display: block; color: var(--child); font: 800 21px/1 "Baloo 2", sans-serif; }
-.child-info small, .child-teacher { display: block; margin-top: 5px; font-size: 12px; font-weight: 700; line-height: 1.35; }
+.child-info { align-self: center; }
+.child-info strong { display: block; color: var(--child); font: 800 43px/1 "Baloo 2", sans-serif; }
+.child-info small, .child-teacher { display: block; margin-top: 5px; font-size: 14px; font-weight: 700; line-height: 1.35; }
 .child-teacher { color: var(--muted); font-size: 11px; }
-.child-summary { grid-column: 1 / -1; border-radius: 14px; padding: 10px; background: color-mix(in srgb, var(--child) 10%, white); color: var(--child); font-size: 12px; font-weight: 800; line-height: 1.4; }
-.child-summary b { font-size: 18px; }
-.child-summary span { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
-.child-alert { grid-column: 1 / -1; border-radius: 12px; padding: 7px 9px; background: #fff0f1; color: var(--danger); font-size: 11px; font-weight: 800; }
+.child-summary { grid-column: 1 / -1; border-radius: 18px; padding: 14px; background: white; color: var(--muted); font-size: 15px; font-weight: 800; line-height: 1.4; box-shadow: 0 8px 18px rgba(30,70,120,.07); }
+.child-summary b { color: var(--child); font-size: 28px; }
+.child-summary span { display: block; margin-top: 5px; color: var(--muted); font-size: 14px; }
+.child-alert { grid-column: 1 / -1; border-radius: 16px; padding: 11px 12px; background: #fff0f1; color: var(--danger); font-size: 14px; font-weight: 800; }
+.enter-child-hint { grid-column: 1 / -1; align-self: end; min-height: 50px; display: grid; place-items: center; border-radius: 15px; background: var(--child); color: white; font: 800 16px "Baloo 2", sans-serif; }
+.carousel-dots { display: flex; justify-content: center; gap: 7px; margin: 2px 0 14px; }
+.carousel-dots span { width: 8px; height: 8px; border-radius: 999px; background: #bed0e8; }
+.carousel-dots span.active { width: 24px; background: var(--blue); }
 .family-agenda { margin-top: 14px; }
 .family-agenda-count { min-height: 30px; display: grid; place-items: center; border-radius: 999px; padding: 5px 9px; background: #eaf1ff; color: var(--blue); font-size: 11px; font-weight: 800; }
 .alert-count, .category-count, .detail-list-head > span { min-height: 30px; display: grid; place-items: center; border-radius: 999px; padding: 5px 9px; background: #fff0f1; color: var(--danger); font-size: 9px; font-weight: 800; }
@@ -109,6 +124,8 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 
 .agenda { padding: 10px; border-radius: 17px; }
 .agenda-list-panel { margin-top: 8px; padding: 10px; border-radius: 17px; }
+.category-zone { margin-top: 14px; }
+.section-line { margin: 0 2px 9px; }
 .view-switch { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 8px 0 7px; padding: 4px; border-radius: 12px; background: #e9f0f7; }
 .view-switch button { min-height: 36px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 800; }
 .view-switch button.active { background: white; color: var(--blue); box-shadow: 0 3px 10px rgba(30,70,120,.1); }
@@ -278,6 +295,14 @@ dialog::backdrop { background: rgba(18, 33, 61, .58); backdrop-filter: blur(3px)
 .dialog-close { width: 42px; height: 42px; }
 .avatar-preview { --child: var(--blue); width: 76px; height: 76px; display: grid; place-items: center; overflow: hidden; margin: 0 auto 14px; border-radius: 24px; background: var(--child); color: white; font: 800 24px "Baloo 2", sans-serif; }
 .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+.preset-avatar-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; }
+.preset-avatar {
+  min-height: 74px; display: grid; grid-template-columns: 52px 1fr; align-items: center; gap: 9px;
+  border: 2px solid var(--line); border-radius: 16px; padding: 8px; background: white; color: var(--ink); text-align: left;
+}
+.preset-avatar.active { border-color: var(--blue); background: #eef4ff; }
+.preset-avatar img { width: 52px; height: 52px; border-radius: 15px; object-fit: cover; }
+.preset-avatar span { font-size: 12px; font-weight: 800; line-height: 1.15; }
 .two-columns { display: grid; grid-template-columns: 1fr 110px; gap: 10px; }
 .compact-dialog p { color: var(--muted); font-size: 12px; line-height: 1.5; }
 .quick-category-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -292,8 +317,8 @@ dialog::backdrop { background: rgba(18, 33, 61, .58); backdrop-filter: blur(3px)
 
 @media (max-width: 390px) {
   .app { padding-left: 9px; padding-right: 9px; }
-  .children-grid { grid-template-columns: 1fr; }
-  .child-card { min-height: 176px; }
+  .children-grid { grid-template-columns: none; }
+  .child-card { min-height: 450px; }
   .profile-banner { grid-template-columns: 42px 1fr auto; }
   .profile-count { grid-column: auto; justify-self: auto; }
   .school-card { min-height: 96px; padding: 7px; }
@@ -306,6 +331,7 @@ dialog::backdrop { background: rgba(18, 33, 61, .58); backdrop-filter: blur(3px)
   .children-settings .panel-heading { align-items: stretch; flex-direction: column; }
   .add-child-settings-button { width: 100%; }
   .family-agenda .filter-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .preset-avatar-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 335px) {

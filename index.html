@@ -27,14 +27,15 @@
     </header>
 
     <section id="homeView" class="view" aria-labelledby="homeTitle">
-      <div class="section-heading">
+      <div class="section-heading home-heading">
         <div>
-          <p class="eyebrow">La famille</p>
-          <h1 id="homeTitle">Les enfants</h1>
-          <p>Choisissez un profil pour ouvrir son espace scolaire.</p>
+          <p class="eyebrow">Choisir un enfant</p>
+          <h1 id="homeTitle">Quel enfant aujourd’hui ?</h1>
+          <p>Faites défiler les cartes, puis touchez un enfant pour ouvrir son espace.</p>
         </div>
       </div>
       <div class="children-grid" id="childrenGrid"></div>
+      <div class="carousel-dots" id="childrenDots"></div>
       <section class="panel family-agenda" id="familyAgendaSection">
         <div class="panel-heading">
           <div><p class="eyebrow">Tous les enfants</p><h2>Agenda familial</h2></div>
@@ -84,8 +85,6 @@
         <div class="calendar" id="calendar"></div>
       </section>
 
-      <section class="school-cards" id="schoolCards" aria-label="Catégories scolaires"></section>
-
       <section class="panel agenda-list-panel" id="agendaListSection">
         <div class="filter-row" id="filterRow"></div>
         <div class="event-list-head">
@@ -93,6 +92,14 @@
           <span id="agendaCount"></span>
         </div>
         <div class="event-list" id="agendaList"></div>
+      </section>
+
+      <section class="category-zone" id="childCategoryZone">
+        <div class="section-line">
+          <p class="eyebrow">Accès par type</p>
+          <h2>Catégories</h2>
+        </div>
+        <section class="school-cards" id="schoolCards" aria-label="Catégories scolaires"></section>
       </section>
 
       <section class="panel category-detail" id="categorySection" hidden>
@@ -158,6 +165,7 @@
       <input id="childId" type="hidden">
       <div class="dialog-heading"><div><p class="eyebrow">Profil scolaire</p><h2 id="childDialogTitle">Ajouter un enfant</h2></div><button class="dialog-close" id="cancelChildButton" type="button" aria-label="Annuler et fermer">×</button></div>
       <div class="avatar-preview" id="avatarPreview">EN</div>
+      <div class="preset-avatar-grid" id="presetAvatarGrid" aria-label="Choix d’avatar"></div>
       <label class="field"><span>Prénom *</span><input id="childName" required autocomplete="given-name"></label>
       <div class="two-columns">
         <label class="field"><span>Classe *</span><input id="childClass" required placeholder="Choisir ou saisir une classe"></label>

@@ -97,6 +97,11 @@ const FIELD_LABELS = {
   date: "Date", time: "Heure", reminder: "Rappel"
 };
 
+const PRESET_AVATARS = [
+  { label: "Garçon", src: "assets/avatars/afrique_ado_garcon.webp" },
+  { label: "Fillette", src: "assets/avatars/afrique_fillette.webp" }
+];
+
 let data = loadData();
 let state = {
   view: "home",
@@ -300,11 +305,27 @@ function renderHome() {
         <span class="child-info"><strong>${escapeHTML(child.name)}</strong><small>${escapeHTML(child.className)} · ${escapeHTML(child.school)}</small><span class="child-teacher">${escapeHTML(child.teacher || "Enseignant non renseigné")}</span></span>
         <span class="child-summary"><b>${upcoming.length}</b> élément${upcoming.length > 1 ? "s" : ""} à venir<span>${next ? `Prochain : ${escapeHTML(itemTitle(next))} · ${formatDate(next.date)}` : "Rien de prévu"}</span></span>
         ${alert ? `<span class="child-alert">${escapeHTML(getAlert(alert).text)} · ${escapeHTML(itemTitle(alert))}</span>` : ""}
+        <span class="enter-child-hint">Entrer dans son espace</span>
       </button>`;
     }).join("");
   }
+  renderChildrenDots();
   $$("[data-open-child]", grid).forEach(button => button.addEventListener("click", () => openChild(button.dataset.openChild)));
+  grid.onscroll = updateChildrenDots;
   renderFamilyAgenda();
+}
+
+function renderChildrenDots() {
+  const dots = $("#childrenDots");
+  dots.innerHTML = data.children.map((_, index) => `<span class="${index === 0 ? "active" : ""}"></span>`).join("");
+}
+
+function updateChildrenDots() {
+  const grid = $("#childrenGrid");
+  const card = $(".child-card", grid);
+  if (!card) return;
+  const index = Math.round(grid.scrollLeft / (card.offsetWidth + 14));
+  $$("#childrenDots span").forEach((dot, dotIndex) => dot.classList.toggle("active", dotIndex === index));
 }
 
 function openChild(id) {
@@ -313,6 +334,7 @@ function openChild(id) {
   $("#categorySection").hidden = true;
   $("#agendaSection").hidden = false;
   $("#schoolCards").hidden = false;
+  $("#childCategoryZone").hidden = false;
   $("#agendaListSection").hidden = false;
   showView("child");
 }
@@ -342,6 +364,7 @@ function openCategory(category, itemId = null) {
   state.category = category;
   $("#agendaSection").hidden = true;
   $("#schoolCards").hidden = true;
+  $("#childCategoryZone").hidden = true;
   $("#agendaListSection").hidden = true;
   $("#categorySection").hidden = false;
   renderChild();
@@ -362,6 +385,7 @@ function showAgenda() {
   $("#categorySection").hidden = true;
   $("#agendaSection").hidden = false;
   $("#schoolCards").hidden = false;
+  $("#childCategoryZone").hidden = false;
   $("#agendaListSection").hidden = false;
   showView("child");
   setTimeout(() => $("#agendaSection").scrollIntoView({ behavior: "smooth", block: "start" }), 0);
@@ -778,8 +802,24 @@ function openChildDialog(id = null) {
   $("#childColor").value = child?.color || "#2457e6";
   state.pendingAvatar = child?.avatar || null;
   renderChildClassChoices();
+  renderPresetAvatars();
   updateAvatarPreview();
   $("#childDialog").showModal();
+}
+
+function renderPresetAvatars() {
+  $("#presetAvatarGrid").innerHTML = PRESET_AVATARS.map(avatar => `
+    <button class="preset-avatar ${state.pendingAvatar === avatar.src ? "active" : ""}" data-preset-avatar="${avatar.src}" type="button">
+      <img src="${avatar.src}" alt="">
+      <span>${escapeHTML(avatar.label)}</span>
+    </button>
+  `).join("");
+  $$("[data-preset-avatar]", $("#presetAvatarGrid")).forEach(button => button.addEventListener("click", () => {
+    state.pendingAvatar = button.dataset.presetAvatar;
+    $("#childAvatar").value = "";
+    renderPresetAvatars();
+    updateAvatarPreview();
+  }));
 }
 
 function renderChildClassChoices() {
@@ -1124,6 +1164,7 @@ function bindEvents() {
     $("#categorySection").hidden = true;
     $("#agendaSection").hidden = false;
     $("#schoolCards").hidden = false;
+    $("#childCategoryZone").hidden = false;
     $("#agendaListSection").hidden = false;
     renderChild();
   });

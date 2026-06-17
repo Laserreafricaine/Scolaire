@@ -252,11 +252,49 @@ function timeShifts(dayItems) {
   return shifts;
 }
 
+let modalToken = 0;
+
+function safeCloseDialog(dialog, returnValue = "cancel") {
+  if (!dialog || !dialog.open) return;
+  try {
+    dialog.close(returnValue);
+  } catch {
+    dialog.removeAttribute("open");
+  }
+}
+
+function closeOtherDialogs(except = null) {
+  $$("dialog[open]").forEach(dialog => {
+    if (dialog !== except) safeCloseDialog(dialog);
+  });
+}
+
 function openModal(selector) {
   const dialog = $(selector);
   if (!dialog) return;
-  if (dialog.open) dialog.close();
-  dialog.showModal();
+  const token = ++modalToken;
+  closeOtherDialogs(dialog);
+  safeCloseDialog(dialog);
+  setTimeout(() => {
+    if (token !== modalToken || dialog.open) return;
+    try {
+      dialog.showModal();
+    } catch {
+      closeOtherDialogs(dialog);
+      setTimeout(() => {
+        if (token !== modalToken || dialog.open) return;
+        try {
+          dialog.showModal();
+        } catch {
+          showToast("Fenêtre bloquée. Touchez à nouveau.");
+        }
+      }, 80);
+    }
+  }, 40);
+}
+
+function runAfterDialogClose(callback) {
+  setTimeout(callback, 90);
 }
 
 function startAddChild() {
@@ -995,7 +1033,7 @@ function applyReschedule(date) {
   item.date = date;
   item.updatedAt = nowISO();
   saveData();
-  $("#rescheduleDialog").close();
+  safeCloseDialog($("#rescheduleDialog"));
   refreshCurrentView();
   showToast("Tâche reportée.");
 }
@@ -1034,7 +1072,7 @@ function editItemFromAnywhere(id) {
 }
 
 function closeItemSummary() {
-  $("#itemSummaryDialog").close("cancel");
+  safeCloseDialog($("#itemSummaryDialog"));
 }
 
 function openChildSummary() {
@@ -1061,7 +1099,7 @@ function openChildSummary() {
 }
 
 function closeChildSummary() {
-  $("#childSummaryDialog").close("cancel");
+  safeCloseDialog($("#childSummaryDialog"));
 }
 
 function editCurrentChildFromSummary() {
@@ -1070,7 +1108,7 @@ function editCurrentChildFromSummary() {
   closeChildSummary();
   state.activeNav = "settings";
   showView("settings");
-  openChildDialog(child.id);
+  runAfterDialogClose(() => openChildDialog(child.id));
 }
 
 function renderChildrenManagement() {
@@ -1127,7 +1165,7 @@ function renderChildClassChoices() {
 function closeChildDialog() {
   $("#childForm").reset();
   state.pendingAvatar = null;
-  $("#childDialog").close("cancel");
+  safeCloseDialog($("#childDialog"));
 }
 
 function updateAvatarPreview() {
@@ -1165,7 +1203,7 @@ function saveChild(event) {
   saveData();
   const guideChild = guide.active && guide.awaiting === "child";
   if (guideChild) guide.awaiting = null;
-  $("#childDialog").close();
+  safeCloseDialog($("#childDialog"));
   renderDatalists();
   if (guideChild) { showToast("Enfant ajouté."); guide.next(); return; }
   showView(isFirstChild || state.view === "home" ? "home" : "settings");
@@ -1181,7 +1219,7 @@ function requestDeleteChild() {
     data.items = data.items.filter(item => item.childId !== id);
     state.childId = data.children[0]?.id || null;
     saveData();
-    $("#childDialog").close();
+    safeCloseDialog($("#childDialog"));
     showView("settings");
     showToast("Profil supprimé.");
   });
@@ -1418,10 +1456,11 @@ function openQuickAdd() {
   state.quickCategoryChosen = false;
   $("#quickCategoryGrid").innerHTML = Object.entries(CATEGORIES).map(([key, category]) => `<button class="quick-category" type="button" style="--category:${category.color}" data-quick-category="${key}">${category.icon}<br>${category.label}</button>`).join("");
   $$("[data-quick-category]", $("#quickCategoryGrid")).forEach(button => button.addEventListener("click", () => {
+    if (state.quickCategoryChosen) return;
     const category = button.dataset.quickCategory;
     state.quickCategoryChosen = true;
-    $("#quickAddDialog").close();
-    requestAnimationFrame(() => openCategory(category));
+    safeCloseDialog($("#quickAddDialog"));
+    runAfterDialogClose(() => openCategory(category));
   }));
   openModal("#quickAddDialog");
 }
@@ -1464,8 +1503,8 @@ function openChildPicker() {
   $("#childPickerGrid").innerHTML = data.children.map(child => `<button class="child-pick" type="button" data-pick-child="${child.id}" style="--child:${child.color}">${avatarHTML(child)}<span>${escapeHTML(child.name)}</span></button>`).join("");
   $$("[data-pick-child]", $("#childPickerGrid")).forEach(button => button.addEventListener("click", () => {
     const id = button.dataset.pickChild;
-    $("#childPickerDialog").close();
-    requestAnimationFrame(() => {
+    safeCloseDialog($("#childPickerDialog"));
+    runAfterDialogClose(() => {
       state.childId = id;
       state.focusDate = state.pendingAddDate || state.focusDate;
       state.selectedDate = state.pendingAddDate || state.focusDate;
@@ -1618,7 +1657,7 @@ function bindEvents() {
   });
   $("#summaryDeleteButton").addEventListener("click", requestDeleteItemFromSummary);
   $("#fabAddButton").addEventListener("click", openQuickAdd);
-  $("#rescheduleCancel").addEventListener("click", () => $("#rescheduleDialog").close("cancel"));
+  $("#rescheduleCancel").addEventListener("click", () => safeCloseDialog($("#rescheduleDialog")));
   $("#rescheduleConfirm").addEventListener("click", () => applyReschedule($("#rescheduleDate").value));
   $$("[data-reschedule]", $("#rescheduleDialog")).forEach(button => button.addEventListener("click", () => {
     const today = new Date();

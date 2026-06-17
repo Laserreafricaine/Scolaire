@@ -20,8 +20,8 @@
   <main class="app">
     <header class="topbar">
       <button class="brand-button" id="brandButton" type="button" aria-label="Retour à l'accueil">
-        <span class="eyebrow">Suivi scolaire familial</span>
-        <strong>ÉCOLE</strong>
+        <img class="brand-logo" src="assets/logo.webp" alt="">
+        <span class="brand-text"><span class="eyebrow">Suivi scolaire familial</span><strong>ÉCOLE</strong></span>
       </button>
       <button class="icon-button" id="topSettingsButton" type="button" aria-label="Ouvrir les réglages">⚙</button>
     </header>
@@ -102,10 +102,6 @@
           <section class="form-zone main-zone">
             <div class="zone-heading"><span>1</span><div><h3>Décrire l’élément</h3><p>Les champs essentiels sont affichés en premier.</p></div></div>
             <div class="fields-grid" id="mainFields"></div>
-            <div class="suggestion-box" id="suggestionBox">
-              <strong>Suggestions rapides</strong>
-              <div class="suggestions" id="suggestions"></div>
-            </div>
           </section>
           <section class="form-zone date-zone">
             <div class="zone-heading"><span>2</span><div><h3>Date et rappel</h3><p>Choisissez l’échéance et le délai souhaité.</p></div></div>
@@ -156,18 +152,31 @@
     <form id="childForm" class="dialog-card">
       <input id="childId" type="hidden">
       <div class="dialog-heading"><div><p class="eyebrow">Profil scolaire</p><h2 id="childDialogTitle">Ajouter un enfant</h2></div><button class="dialog-close" id="cancelChildButton" type="button" aria-label="Annuler et fermer">×</button></div>
-      <div class="avatar-preview" id="avatarPreview">EN</div>
-      <div class="preset-avatar-grid" id="presetAvatarGrid" aria-label="Choix d’avatar"></div>
-      <label class="field"><span>Prénom *</span><input id="childName" required autocomplete="given-name"></label>
-      <div class="two-columns">
-        <label class="field"><span>Classe *</span><input id="childClass" required placeholder="Choisir ou saisir une classe"></label>
-        <label class="field"><span>Couleur d’avatar</span><input id="childColor" type="color" value="#2457e6"></label>
-      </div>
-      <div class="choice-buttons class-choice-buttons" id="childClassChoices" aria-label="Classes proposées"></div>
-      <label class="field"><span>Établissement *</span><input id="childSchool" required list="schoolsList"></label>
-      <label class="field"><span>Téléphone de l’école</span><input id="childSchoolPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Ex. 01 23 45 67 89"></label>
-      <label class="field"><span>Enseignant ou professeur principal</span><input id="childTeacher" list="teachersList"></label>
-      <label class="field"><span>Photo d’avatar</span><input id="childAvatar" type="file" accept="image/*"></label>
+
+      <section class="form-zone child-zone cz-avatar">
+        <div class="zone-heading"><span>1</span><div><h3>Avatar</h3><p>Choisissez une image ou importez une photo.</p></div></div>
+        <div class="avatar-preview" id="avatarPreview">EN</div>
+        <div class="preset-avatar-grid" id="presetAvatarGrid" aria-label="Choix d’avatar"></div>
+        <label class="field"><span>Photo d’avatar</span><input id="childAvatar" type="file" accept="image/*"></label>
+      </section>
+
+      <section class="form-zone child-zone cz-info">
+        <div class="zone-heading"><span>2</span><div><h3>L’enfant</h3><p>Prénom, classe et couleur.</p></div></div>
+        <label class="field"><span>Prénom *</span><input id="childName" required autocomplete="given-name"></label>
+        <div class="two-columns">
+          <label class="field"><span>Classe *</span><input id="childClass" required placeholder="Choisir ou saisir une classe"></label>
+          <label class="field"><span>Couleur</span><input id="childColor" type="color" value="#2457e6"></label>
+        </div>
+        <div class="choice-buttons class-choice-buttons" id="childClassChoices" aria-label="Classes proposées"></div>
+      </section>
+
+      <section class="form-zone child-zone cz-school">
+        <div class="zone-heading"><span>3</span><div><h3>Son école</h3><p>Établissement et contacts.</p></div></div>
+        <label class="field"><span>Établissement *</span><input id="childSchool" required list="schoolsList"></label>
+        <label class="field"><span>Téléphone de l’école</span><input id="childSchoolPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Ex. 01 23 45 67 89"></label>
+        <label class="field"><span>Enseignant ou professeur principal</span><input id="childTeacher" list="teachersList"></label>
+      </section>
+
       <div class="form-actions">
         <button class="secondary-button" id="cancelChildFormButton" type="button">Annuler</button>
         <button class="danger-button" id="deleteChildButton" type="button" hidden>Supprimer</button>
@@ -240,6 +249,26 @@
       </div>
     </form>
   </dialog>
+
+  <dialog id="childPickerDialog">
+    <form method="dialog" class="dialog-card compact-dialog">
+      <div class="dialog-heading"><div><p class="eyebrow">Nouvel élément</p><h2>Pour quel enfant ?</h2></div><button class="dialog-close" value="cancel" aria-label="Fermer">×</button></div>
+      <div class="child-picker-grid" id="childPickerGrid"></div>
+    </form>
+  </dialog>
+
+  <div class="guide-overlay" id="guideOverlay" hidden>
+    <div class="guide-spot" id="guideSpot" hidden></div>
+    <div class="guide-bubble" id="guideBubble">
+      <p class="guide-progress" id="guideProgress"></p>
+      <h3 id="guideTitle"></h3>
+      <p id="guideText"></p>
+      <div class="guide-actions">
+        <button class="guide-skip" id="guideSkip" type="button">Passer le guide</button>
+        <button class="guide-next" id="guideNext" type="button">Suivant</button>
+      </div>
+    </div>
+  </div>
 
   <datalist id="classesList"></datalist>
   <datalist id="schoolsList"></datalist>

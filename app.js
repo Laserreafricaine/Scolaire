@@ -98,8 +98,15 @@ const FIELD_LABELS = {
 };
 
 const PRESET_AVATARS = [
-  { label: "Garçon", src: "assets/avatars/afrique_ado_garcon.webp" },
-  { label: "Fillette", src: "assets/avatars/afrique_fillette.webp" }
+  { label: "Fillette", src: "assets/avatars/afrique_fillette.webp" },
+  { label: "Fillette", src: "assets/avatars/asie_petite_fillette.webp" },
+  { label: "Fillette", src: "assets/avatars/europe_fillette.webp" },
+  { label: "Ado fille", src: "assets/avatars/afrique_ado_fille.webp" },
+  { label: "Ado fille", src: "assets/avatars/asie_ado_fille.webp" },
+  { label: "Ado fille", src: "assets/avatars/europe_ado_fille.webp" },
+  { label: "Ado garçon", src: "assets/avatars/afrique_ado_garcon.webp" },
+  { label: "Ado garçon", src: "assets/avatars/asie_ado_garcon.webp" },
+  { label: "Ado garçon", src: "assets/avatars/europe_ado_garcon.webp" }
 ];
 
 let data = loadData();
@@ -250,6 +257,12 @@ function openModal(selector) {
   dialog.showModal();
 }
 
+function startAddChild() {
+  state.activeNav = "settings";
+  showView("settings");
+  openChildDialog();
+}
+
 function itemTitle(item) {
   const config = CATEGORIES[item.category];
   return item.title || item.details?.[config?.titleField] || config?.label || "Élément scolaire";
@@ -335,7 +348,7 @@ function showView(view) {
 function renderHome() {
   const grid = $("#childrenGrid");
   if (!data.children.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><strong>Bienvenue dans ÉCOLE</strong>Ouvrez Réglages pour ajouter un enfant.</div>`;
+    grid.innerHTML = `<button class="empty-state empty-action" id="homeAddChildButton" type="button" style="grid-column:1/-1"><strong>Bienvenue dans ÉCOLE</strong>Toucher pour ajouter un premier enfant.</button>`;
   } else {
     grid.innerHTML = data.children.map(child => {
       const upcoming = getUpcoming(child.id);
@@ -354,6 +367,7 @@ function renderHome() {
     }).join("");
   }
   renderChildrenDots();
+  $("#homeAddChildButton")?.addEventListener("click", startAddChild);
   $$("[data-open-child]", grid).forEach(button => button.addEventListener("click", () => openChild(button.dataset.openChild)));
   grid.onscroll = updateChildrenDots;
   renderFamilyAgenda();
@@ -524,6 +538,7 @@ function renderFamilyAgenda() {
     event.stopPropagation();
     openItemSummary(button.dataset.familyGanttItem);
   }));
+  $$("[data-family-add]", $("#familyCalendar")).forEach(button => button.addEventListener("click", addFromFamily));
   renderFamilyFilters();
   renderFamilyAgendaList(start, end);
 }
@@ -557,7 +572,7 @@ function renderFamilyGantt(start, end) {
           <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(child?.name || "")} · ${category.short}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
         </button>`;
       }).join("");
-    })() : `<div class="gantt-empty-day gantt-empty-static">Aucune tâche</div>`;
+    })() : `<button class="gantt-empty-day gantt-empty-static" data-family-add type="button">Aucune tâche<br><small>Toucher pour ajouter</small></button>`;
     return `<article class="gantt-day ${today ? "today" : ""}">
       <button class="gantt-day-head" data-family-calendar-date="${iso}" type="button">
         <span>${formatDate(date, { weekday: "short" })}</span><strong>${date.getDate()}</strong>
@@ -593,10 +608,10 @@ function eventItemHTML(item, secondaryName = "") {
   </div>`;
 }
 
-function overdueItemHTML(item) {
+function overdueItemHTML(item, secondaryName = "") {
   const category = CATEGORIES[item.category];
   const done = isDone(item);
-  const meta = [itemDetails(item), item.time || ""].filter(Boolean).join(" · ");
+  const meta = [secondaryName, itemDetails(item), item.time || ""].filter(Boolean).join(" · ");
   return `<div class="overdue-item ${done ? "done" : ""}" style="--event:${eventColor(item)}">
     <button class="event-check" data-toggle-item="${item.id}" type="button" aria-label="${done ? "Décocher" : "Marquer comme fait"}">${done ? "✓" : ""}</button>
     <button class="event urgent-event ${done ? "done" : ""}" style="--event:${eventColor(item)}" data-open-item="${item.id}" type="button">
@@ -623,18 +638,30 @@ function detailItemHTML(item) {
 function renderFamilyAgendaList(periodStart, periodEnd) {
   const startISO = toISODate(periodStart);
   const endISO = toISODate(periodEnd);
-  const items = data.items
+  const periodItems = data.items
     .filter(item => item.date && item.date >= startISO && item.date <= endISO)
     .filter(item => state.familyFilter === "all" || item.category === state.familyFilter)
+    .filter(item => !isOverdue(item))
     .sort(sortItems);
-  $("#familyAgendaCount").textContent = `${items.length} élément${items.length > 1 ? "s" : ""}`;
-  $("#familyListCount").textContent = `${items.length} élément${items.length > 1 ? "s" : ""}`;
-  $("#familyAgendaList").innerHTML = items.length ? items.map(item => {
+  const overdueItems = data.items
+    .filter(isOverdue)
+    .filter(item => state.familyFilter === "all" || item.category === state.familyFilter)
+    .sort(sortItems);
+  $("#familyAgendaCount").textContent = `${periodItems.length} élément${periodItems.length > 1 ? "s" : ""}`;
+  $("#familyListCount").textContent = `${periodItems.length} élément${periodItems.length > 1 ? "s" : ""}`;
+  const overdueBlock = overdueItems.length ? `<div class="overdue-block">
+    <div class="overdue-head">⚠ En retard <span>${overdueItems.length}</span></div>
+    ${overdueItems.map(item => overdueItemHTML(item, data.children.find(entry => entry.id === item.childId)?.name || "")).join("")}
+  </div>` : "";
+  const periodBlock = periodItems.length ? periodItems.map(item => {
     const child = data.children.find(entry => entry.id === item.childId);
     return eventItemHTML(item, child?.name || "");
-  }).join("") : `<div class="empty-state"><strong>Aucun élément</strong>Rien n’est prévu pour cette période.</div>`;
+  }).join("") : (overdueItems.length ? "" : `<button class="empty-state empty-action" data-family-add type="button"><strong>Aucun élément</strong>Toucher pour ajouter une tâche.</button>`);
+  $("#familyAgendaList").innerHTML = overdueBlock + periodBlock;
   $$("[data-open-item]", $("#familyAgendaList")).forEach(button => button.addEventListener("click", () => openItemSummary(button.dataset.openItem)));
   $$("[data-toggle-item]", $("#familyAgendaList")).forEach(button => button.addEventListener("click", () => toggleItem(button.dataset.toggleItem)));
+  $$("[data-reschedule-item]", $("#familyAgendaList")).forEach(button => button.addEventListener("click", () => openReschedule(button.dataset.rescheduleItem)));
+  $$("[data-family-add]", $("#familyAgendaList")).forEach(button => button.addEventListener("click", addFromFamily));
 }
 
 function calendarDayHTML(date, monthMode = false, activeMonth = null) {
@@ -791,13 +818,15 @@ function buildItemFields(category) {
   $("#moreFieldsPanel").hidden = !extras.length;
   const noSuggestions = ["meetings", "trips", "documents"];
   const suggestions = noSuggestions.includes(state.category) ? [] : category.subjectRef ? data.refs[category.subjectRef] : data.refs.suggestions;
-  const suggestionTarget = state.category === "supplies" ? '[data-item-field="use"]' : "[data-item-field]";
-  $("#suggestionBox").hidden = !suggestions?.length;
-  $("#suggestions").innerHTML = (suggestions || []).slice(0, 8).map(value => `<button data-suggestion="${escapeHTML(value)}" type="button">${escapeHTML(value)}</button>`).join("");
-  $$("[data-suggestion]", $("#suggestions")).forEach(button => button.addEventListener("click", () => {
-    const target = $(suggestionTarget, $("#mainFields"));
-    if (target) target.value = button.dataset.suggestion;
-  }));
+  const targetKey = state.category === "supplies" ? "use" : main[0][0];
+  const targetInput = $(`[data-item-field="${targetKey}"]`, $("#mainFields"));
+  if (suggestions && suggestions.length && targetInput) {
+    const box = document.createElement("div");
+    box.className = "suggestion-inline";
+    box.innerHTML = `<div class="suggestions">${suggestions.slice(0, 8).map(value => `<button data-suggestion="${escapeHTML(value)}" type="button">${escapeHTML(value)}</button>`).join("")}</div><small class="suggestion-hint">Touchez une suggestion, ou saisissez votre propre valeur — elle sera mémorisée.</small>`;
+    targetInput.closest(".field").after(box);
+    $$("[data-suggestion]", box).forEach(button => button.addEventListener("click", () => { targetInput.value = button.dataset.suggestion; }));
+  }
   $$("[data-reminder-choice]", $("#dateFields")).forEach(button => button.addEventListener("click", () => setReminderChoice(button.dataset.reminderChoice)));
 }
 
@@ -900,11 +929,16 @@ function saveItem(event) {
     data.items.push({ id: uid("item"), ...values, createdAt: nowISO(), updatedAt: nowISO() });
     showToast("Élément ajouté.");
   }
+  CATEGORIES[values.category].fields.forEach(field => {
+    if (field[5] && values.details[field[0]]) addRefValue(field[5], values.details[field[0]]);
+  });
   if (!saveData()) return;
+  renderDatalists();
   state.focusDate = values.date || state.focusDate;
   state.selectedDate = null;
   state.filter = "all";
   resetItemForm();
+  if (guide.active && guide.awaiting === "item") { guide.awaiting = null; guide.next(); return; }
   showChildHome("list");
 }
 
@@ -1043,9 +1077,8 @@ function openChildDialog(id = null) {
 
 function renderPresetAvatars() {
   $("#presetAvatarGrid").innerHTML = PRESET_AVATARS.map(avatar => `
-    <button class="preset-avatar ${state.pendingAvatar === avatar.src ? "active" : ""}" data-preset-avatar="${avatar.src}" type="button">
-      <img src="${avatar.src}" alt="">
-      <span>${escapeHTML(avatar.label)}</span>
+    <button class="preset-avatar ${state.pendingAvatar === avatar.src ? "active" : ""}" data-preset-avatar="${avatar.src}" type="button" aria-label="${escapeHTML(avatar.label)}" title="${escapeHTML(avatar.label)}">
+      <img src="${avatar.src}" alt="${escapeHTML(avatar.label)}">
     </button>
   `).join("");
   $$("[data-preset-avatar]", $("#presetAvatarGrid")).forEach(button => button.addEventListener("click", () => {
@@ -1083,6 +1116,7 @@ function saveChild(event) {
   event.preventDefault();
   if (!$("#childForm").reportValidity()) return;
   const id = $("#childId").value;
+  const isFirstChild = !id && data.children.length === 0;
   const values = {
     name: $("#childName").value.trim(),
     className: $("#childClass").value.trim(),
@@ -1103,9 +1137,12 @@ function saveChild(event) {
   addRefValue("schools", values.school);
   addRefValue("teachers", values.teacher);
   saveData();
+  const guideChild = guide.active && guide.awaiting === "child";
+  if (guideChild) guide.awaiting = null;
   $("#childDialog").close();
   renderDatalists();
-  showView(state.view === "home" ? "home" : "settings");
+  if (guideChild) { showToast("Enfant ajouté."); guide.next(); return; }
+  showView(isFirstChild || state.view === "home" ? "home" : "settings");
   showToast(id ? "Profil modifié." : "Enfant ajouté.");
 }
 
@@ -1150,6 +1187,7 @@ function renderSettings() {
         <button class="primary-button" id="exportButton" type="button">Exporter JSON</button>
         <button class="secondary-button" id="importButton" type="button">Importer JSON</button>
         <button class="secondary-button" id="clearDoneButton" type="button">Supprimer les terminés</button>
+        <button class="secondary-button" id="guideReplayButton" type="button">Revoir le guide</button>
         <button class="danger-button" id="clearAllItemsButton" type="button">Supprimer toutes les tâches</button>
         <button class="danger-button" id="resetChildButton" type="button">Réinitialiser l’enfant</button>
         <button class="danger-button" id="resetAllButton" type="button">Réinitialisation complète</button>
@@ -1180,6 +1218,7 @@ function renderSettings() {
   $("#exportButton").addEventListener("click", exportData);
   $("#importButton").addEventListener("click", () => $("#importInput").click());
   $("#clearDoneButton").addEventListener("click", clearCompleted);
+  $("#guideReplayButton").addEventListener("click", () => guide.start(true));
   $("#clearAllItemsButton").addEventListener("click", clearAllItems);
   $("#resetChildButton").addEventListener("click", resetCurrentChild);
   $("#resetAllButton").addEventListener("click", resetAll);
@@ -1393,6 +1432,113 @@ function readSmallFile(file, callback) {
   reader.readAsDataURL(file);
 }
 
+function openChildPicker() {
+  $("#childPickerGrid").innerHTML = data.children.map(child => `<button class="child-pick" type="button" data-pick-child="${child.id}" style="--child:${child.color}">${avatarHTML(child)}<span>${escapeHTML(child.name)}</span></button>`).join("");
+  $$("[data-pick-child]", $("#childPickerGrid")).forEach(button => button.addEventListener("click", () => {
+    const id = button.dataset.pickChild;
+    $("#childPickerDialog").close();
+    requestAnimationFrame(() => { state.childId = id; showView("child"); openQuickAdd(); });
+  }));
+  openModal("#childPickerDialog");
+}
+
+function addFromFamily() {
+  if (!data.children.length) { startAddChild(); return; }
+  if (data.children.length === 1) {
+    state.childId = data.children[0].id;
+    showView("child");
+    openQuickAdd();
+    return;
+  }
+  openChildPicker();
+}
+
+const GUIDE_STEPS = [
+  { kind: "panel", title: "Bienvenue dans ÉCOLE", text: "On prépare l’appli ensemble en une minute : un enfant, une première action, puis je vous montre l’essentiel.", next: "C’est parti" },
+  { kind: "child" },
+  { kind: "item" },
+  { kind: "spot", prep: () => showChildHome("agenda", "child"), target: "#agendaAddButton", title: "Ajouter une tâche", text: "Ce bouton ouvre les 6 catégories — devoirs, contrôles, sorties, fournitures, rendez-vous, documents — pour ranger chaque tâche au bon endroit." },
+  { kind: "spot", target: "#agendaSection", title: "L’agenda de l’enfant", text: "Vue Gantt par jour, retards signalés en haut, et on coche une tâche dès qu’elle est faite." },
+  { kind: "spot", prep: () => showView("home"), target: "#familyAgendaSection", title: "L’agenda de la famille", text: "Sur l’accueil, cet agenda regroupe tout le monde et signale les retards de chacun." },
+  { kind: "panel", title: "C’est prêt !", text: "Tout est en place. Vous pourrez revoir ce guide à tout moment depuis les Réglages.", next: "Terminer" }
+];
+
+const guide = {
+  active: false, review: false, i: 0, awaiting: null, steps: [],
+  start(review = false) {
+    this.review = review;
+    this.steps = review ? GUIDE_STEPS.filter(step => step.kind !== "child" && step.kind !== "item") : GUIDE_STEPS;
+    if (review && !state.childId) state.childId = data.children[0]?.id || null;
+    this.active = true;
+    this.i = 0;
+    this.awaiting = null;
+    showView("home");
+    this.show();
+  },
+  show() {
+    const step = this.steps[this.i];
+    if (!step) return this.finish();
+    if (step.kind === "child") { this.awaiting = "child"; $("#guideOverlay").hidden = true; openChildDialog(); return; }
+    if (step.kind === "item") {
+      this.awaiting = "item";
+      $("#guideOverlay").hidden = true;
+      if (!state.childId) state.childId = data.children[0]?.id || null;
+      if (!state.childId) { this.next(); return; }
+      state.category = "homework";
+      showView("child");
+      openCategory("homework");
+      return;
+    }
+    this.awaiting = null;
+    if (step.prep) step.prep();
+    this.renderStep(step);
+  },
+  renderStep(step) {
+    const overlay = $("#guideOverlay");
+    const spot = $("#guideSpot");
+    const bubble = $("#guideBubble");
+    $("#guideProgress").textContent = `Étape ${this.i + 1} / ${this.steps.length}`;
+    $("#guideTitle").textContent = step.title;
+    $("#guideText").textContent = step.text;
+    $("#guideNext").textContent = step.next || (this.i === this.steps.length - 1 ? "Terminer" : "Suivant");
+    overlay.hidden = false;
+    const el = step.target ? $(step.target) : null;
+    if (step.kind === "spot" && el) {
+      overlay.classList.remove("dim");
+      el.scrollIntoView({ behavior: "auto", block: "center" });
+      requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect();
+        spot.hidden = false;
+        spot.style.left = `${Math.max(4, r.left - 6)}px`;
+        spot.style.top = `${Math.max(4, r.top - 6)}px`;
+        spot.style.width = `${r.width + 12}px`;
+        spot.style.height = `${r.height + 12}px`;
+        bubble.classList.add("anchored");
+        const roomBelow = window.innerHeight - r.bottom;
+        bubble.style.top = roomBelow > 230 ? `${r.bottom + 16}px` : `${Math.max(12, r.top - 16 - bubble.offsetHeight)}px`;
+      });
+    } else {
+      overlay.classList.add("dim");
+      spot.hidden = true;
+      bubble.classList.remove("anchored");
+      bubble.style.top = "";
+    }
+  },
+  next() { this.i++; if (this.i >= this.steps.length) return this.finish(); this.show(); },
+  skip() { this.finish(); },
+  end(targetView) {
+    this.active = false;
+    this.awaiting = null;
+    $("#guideOverlay").hidden = true;
+    $("#guideSpot").hidden = true;
+    data.preferences.guideSeen = true;
+    saveData();
+    showView(targetView);
+  },
+  finish() { this.end("home"); },
+  stop() { this.end(data.children.length ? "home" : "settings"); }
+};
+
 function bindEvents() {
   $("#brandButton").addEventListener("click", () => showView("home"));
   $("#topSettingsButton").addEventListener("click", () => showView("settings"));
@@ -1423,6 +1569,9 @@ function bindEvents() {
   $("#childSummaryCloseButton").addEventListener("click", closeChildSummary);
   $("#childSummaryEditButton").addEventListener("click", editCurrentChildFromSummary);
   $("#childForm").addEventListener("submit", saveChild);
+  $("#childDialog").addEventListener("close", () => { if (guide.active && guide.awaiting === "child") guide.stop(); });
+  $("#guideNext").addEventListener("click", () => guide.next());
+  $("#guideSkip").addEventListener("click", () => guide.skip());
   $("#cancelChildButton").addEventListener("click", closeChildDialog);
   $("#cancelChildFormButton").addEventListener("click", closeChildDialog);
   $("#deleteChildButton").addEventListener("click", requestDeleteChild);
@@ -1488,5 +1637,11 @@ function registerServiceWorker() {
 renderDatalists();
 bindEvents();
 setupMobileViewport();
-showView("home");
+if (!data.preferences.guideSeen && !data.children.length) {
+  guide.start();
+} else if (data.children.length) {
+  showView("home");
+} else {
+  startAddChild();
+}
 registerServiceWorker();

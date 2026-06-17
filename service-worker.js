@@ -1,14 +1,22 @@
-const CACHE_NAME = "ecole-v2-20260617-4";
+const CACHE_NAME = "ecole-v2-20260617-8";
 const APP_FILES = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./manifest.webmanifest",
+  "./assets/logo.webp",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+  "./assets/avatars/afrique_fillette.webp",
+  "./assets/avatars/asie_petite_fillette.webp",
+  "./assets/avatars/europe_fillette.webp",
+  "./assets/avatars/afrique_ado_fille.webp",
+  "./assets/avatars/asie_ado_fille.webp",
+  "./assets/avatars/europe_ado_fille.webp",
   "./assets/avatars/afrique_ado_garcon.webp",
-  "./assets/avatars/afrique_fillette.webp"
+  "./assets/avatars/asie_ado_garcon.webp",
+  "./assets/avatars/europe_ado_garcon.webp"
 ];
 
 self.addEventListener("install", event => {

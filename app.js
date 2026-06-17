@@ -62,7 +62,7 @@ const CATEGORIES = {
     fields: [
       ["person", "Personne rencontrée", "text", true, "Ex. Mme Martin"],
       ["role", "Rôle", "text", false, "Ex. enseignante"],
-      ["reason", "Motif", "text", true, "Ex. bilan du trimestre"],
+      ["reason", "Motif", "text", false, "Ex. bilan du trimestre"],
       ["location", "Lieu", "text", false, "Ex. salle 12"],
       ["questions", "Questions", "textarea", false, "Questions à poser"],
       ["report", "Compte rendu", "textarea", false, "Notes après le rendez-vous"]
@@ -234,6 +234,20 @@ function refreshCurrentView() {
     renderChildrenManagement();
     renderSettings();
   }
+}
+
+function timeShifts(dayItems) {
+  const times = [...new Set(dayItems.filter(item => item.time).map(item => item.time))].sort();
+  const shifts = {};
+  dayItems.forEach(item => { shifts[item.id] = item.time ? Math.min(times.indexOf(item.time), 6) : 0; });
+  return shifts;
+}
+
+function openModal(selector) {
+  const dialog = $(selector);
+  if (!dialog) return;
+  if (dialog.open) dialog.close();
+  dialog.showModal();
 }
 
 function itemTitle(item) {
@@ -534,13 +548,16 @@ function renderFamilyGantt(start, end) {
     const iso = toISODate(date);
     const dayItems = items.filter(item => item.date === iso);
     const today = iso === toISODate(new Date());
-    const content = dayItems.length ? dayItems.map(item => {
-      const category = CATEGORIES[item.category];
-      const child = data.children.find(entry => entry.id === item.childId);
-      return `<button class="gantt-task ${isDone(item) ? "done" : ""} ${isOverdue(item) ? "urgent-event" : ""}" data-family-gantt-item="${item.id}" style="--event:${child?.color || category.color}" type="button">
-        <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(child?.name || "")} · ${category.short}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
-      </button>`;
-    }).join("") : `<div class="gantt-empty-day gantt-empty-static">Aucune tâche</div>`;
+    const content = dayItems.length ? (() => {
+      const shifts = timeShifts(dayItems);
+      return dayItems.map(item => {
+        const category = CATEGORIES[item.category];
+        const child = data.children.find(entry => entry.id === item.childId);
+        return `<button class="gantt-task ${isDone(item) ? "done" : ""} ${isOverdue(item) ? "urgent-event" : ""}" data-family-gantt-item="${item.id}" style="--event:${child?.color || category.color};--shift:${shifts[item.id]}" type="button">
+          <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(child?.name || "")} · ${category.short}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
+        </button>`;
+      }).join("");
+    })() : `<div class="gantt-empty-day gantt-empty-static">Aucune tâche</div>`;
     return `<article class="gantt-day ${today ? "today" : ""}">
       <button class="gantt-day-head" data-family-calendar-date="${iso}" type="button">
         <span>${formatDate(date, { weekday: "short" })}</span><strong>${date.getDate()}</strong>
@@ -640,12 +657,15 @@ function renderGantt(start, end) {
     const iso = toISODate(date);
     const dayItems = items.filter(item => item.date === iso);
     const today = iso === toISODate(new Date());
-    const content = dayItems.length ? dayItems.map(item => {
-      const category = CATEGORIES[item.category];
-      return `<button class="gantt-task ${isDone(item) ? "done" : ""}" data-gantt-item="${item.id}" style="--event:${category.color}" type="button">
-        <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${category.short}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
-      </button>`;
-    }).join("") : `<button class="gantt-empty-day" data-calendar-date="${iso}" type="button">Aucune tâche<br><small>Toucher pour ajouter</small></button>`;
+    const content = dayItems.length ? (() => {
+      const shifts = timeShifts(dayItems);
+      return dayItems.map(item => {
+        const category = CATEGORIES[item.category];
+        return `<button class="gantt-task ${isDone(item) ? "done" : ""} ${isOverdue(item) ? "urgent-event" : ""}" data-gantt-item="${item.id}" style="--event:${category.color};--shift:${shifts[item.id]}" type="button">
+          <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${category.short}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
+        </button>`;
+      }).join("");
+    })() : `<button class="gantt-empty-day" data-calendar-date="${iso}" type="button">Aucune tâche<br><small>Toucher pour ajouter</small></button>`;
     return `<article class="gantt-day ${today ? "today" : ""}">
       <button class="gantt-day-head" data-calendar-date="${iso}" type="button" aria-label="Ajouter le ${formatDate(date, { day: "numeric", month: "long" })}">
         <span>${formatDate(date, { weekday: "short" })}</span><strong>${date.getDate()}</strong>
@@ -715,7 +735,7 @@ function openItemSummary(id) {
   $("#summaryDetails").innerHTML = detailRows.length ? detailRows.map(([label, value]) => `
     <div class="summary-row"><span>${escapeHTML(label)}</span><strong>${escapeHTML(value)}</strong></div>
   `).join("") : `<div class="empty-state"><strong>Aucun dÃ©tail</strong>Seules les informations essentielles sont renseignÃ©es.</div>`;
-  $("#itemSummaryDialog").showModal();
+  openModal("#itemSummaryDialog");
 }
 
 function summaryRows(item) {
@@ -905,7 +925,7 @@ function openReschedule(id) {
   $("#rescheduleDialog").dataset.itemId = id;
   $("#rescheduleMessage").textContent = `« ${itemTitle(item)} » est en retard. Choisissez une nouvelle date.`;
   $("#rescheduleDate").value = toISODate(new Date());
-  $("#rescheduleDialog").showModal();
+  openModal("#rescheduleDialog");
 }
 
 function applyReschedule(date) {
@@ -977,7 +997,7 @@ function openChildSummary() {
     ["Téléphone école", child.schoolPhone || "Non renseigné"],
     ["Enseignant", child.teacher || "Non renseigné"]
   ].map(([label, value]) => `<div class="summary-row"><span>${escapeHTML(label)}</span><strong>${escapeHTML(value)}</strong></div>`).join("");
-  $("#childSummaryDialog").showModal();
+  openModal("#childSummaryDialog");
 }
 
 function closeChildSummary() {
@@ -1018,7 +1038,7 @@ function openChildDialog(id = null) {
   renderChildClassChoices();
   renderPresetAvatars();
   updateAvatarPreview();
-  $("#childDialog").showModal();
+  openModal("#childDialog");
 }
 
 function renderPresetAvatars() {
@@ -1291,7 +1311,7 @@ function askConfirm(title, message, action) {
   state.pendingConfirm = action;
   $("#confirmTitle").textContent = title;
   $("#confirmMessage").textContent = message;
-  $("#confirmDialog").showModal();
+  openModal("#confirmDialog");
 }
 
 function renderDatalists() {
@@ -1333,11 +1353,10 @@ function openQuickAdd() {
   $("#quickCategoryGrid").innerHTML = Object.entries(CATEGORIES).map(([key, category]) => `<button class="quick-category" type="button" style="--category:${category.color}" data-quick-category="${key}">${category.icon}<br>${category.label}</button>`).join("");
   $$("[data-quick-category]", $("#quickCategoryGrid")).forEach(button => button.addEventListener("click", () => {
     const category = button.dataset.quickCategory;
-    const dialog = $("#quickAddDialog");
-    dialog.addEventListener("close", () => openCategory(category), { once: true });
-    dialog.close();
+    $("#quickAddDialog").close();
+    requestAnimationFrame(() => openCategory(category));
   }));
-  $("#quickAddDialog").showModal();
+  openModal("#quickAddDialog");
 }
 
 function setupMobileViewport() {

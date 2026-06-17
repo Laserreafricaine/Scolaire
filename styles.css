@@ -462,3 +462,6 @@ dialog::backdrop { background: rgba(18, 33, 61, .58); backdrop-filter: blur(3px)
 /* Gantt familial vertical : retard + jour vide */
 .gantt-task.urgent-event { outline: 2px solid var(--danger); outline-offset: -2px; }
 .gantt-empty-static { display: grid; place-items: center; color: var(--muted); font-weight: 700; }
+
+/* Décalage horizontal des tâches d'un même jour selon l'heure (Gantt) */
+.gantt-day-items .gantt-task { margin-left: calc(var(--shift, 0) * 18px); }

@@ -203,6 +203,21 @@
     </form>
   </dialog>
 
+  <dialog id="itemSummaryDialog">
+    <form method="dialog" class="dialog-card item-summary-card">
+      <div class="dialog-heading">
+        <div><p class="eyebrow" id="summaryEyebrow">Élément scolaire</p><h2 id="summaryTitle"></h2></div>
+        <button class="dialog-close" id="summaryCloseButton" type="button" aria-label="Retour à l’agenda">×</button>
+      </div>
+      <div class="summary-main" id="summaryMain"></div>
+      <div class="summary-details" id="summaryDetails"></div>
+      <div class="form-actions">
+        <button class="secondary-button" id="summaryBackButton" type="button">Retour à l’agenda</button>
+        <button class="primary-button" id="summaryEditButton" type="button">Modifier</button>
+      </div>
+    </form>
+  </dialog>
+
   <datalist id="classesList"></datalist>
   <datalist id="schoolsList"></datalist>
   <datalist id="teachersList"></datalist>

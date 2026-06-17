@@ -50,10 +50,10 @@ const CATEGORIES = {
     fields: [
       ["article", "Article", "text", true, "Ex. cahier 24 × 32"],
       ["use", "Matière ou usage", "text", false, "Ex. Arts plastiques", "subjects"],
-      ["quantity", "Quantité", "number", false, "1"],
-      ["purchased", "Acheté", "checkbox", false],
+      ["quantity", "Quantité à prévoir", "number", false, "1"],
+      ["purchased", "Article acheté / déjà disponible", "checkbox", false],
       ["cost", "Coût", "text", false, "Ex. 4,50 €"],
-      ["store", "Magasin ou précision", "text", false, "Ex. papeterie"]
+      ["store", "Magasin ou note", "text", false, "Ex. papeterie"]
     ]
   },
   meetings: {
@@ -223,7 +223,7 @@ function itemDetails(item) {
   const details = item.details || {};
   if (item.category === "homework" || item.category === "tests") return details.subject || "";
   if (item.category === "trips" || item.category === "meetings") return details.location || details.reason || "";
-  if (item.category === "supplies") return details.use || "";
+  if (item.category === "supplies") return [details.use, details.quantity ? `QtÃ© ${details.quantity}` : "", details.purchased ? "achetÃ©" : "Ã  acheter"].filter(Boolean).join(" Â· ");
   if (item.category === "documents") return details.service || "";
   return "";
 }
@@ -538,7 +538,7 @@ function renderFamilyAgendaList(periodStart, periodEnd) {
       <span class="event-tag">${category.short}</span>
     </button>`;
   }).join("") : `<div class="empty-state"><strong>Aucun élément</strong>Rien n’est prévu pour cette période.</div>`;
-  $$("[data-family-item]", $("#familyAgendaList")).forEach(button => button.addEventListener("click", () => editItemFromAnywhere(button.dataset.familyItem)));
+  $$("[data-family-item]", $("#familyAgendaList")).forEach(button => button.addEventListener("click", () => openItemSummary(button.dataset.familyItem)));
 }
 
 function calendarDayHTML(date, monthMode = false, activeMonth = null) {
@@ -600,8 +600,49 @@ function renderAgendaList(periodStart, periodEnd) {
   }).join("") : `<div class="empty-state"><strong>Aucun élément</strong>La période et les filtres sélectionnés sont vides.</div>`;
   $$("[data-agenda-item]", $("#agendaList")).forEach(button => button.addEventListener("click", () => {
     const item = data.items.find(entry => entry.id === button.dataset.agendaItem);
-    openCategory(item.category, item.id);
+    openItemSummary(item.id);
   }));
+}
+
+function openItemSummary(id) {
+  const item = data.items.find(entry => entry.id === id);
+  if (!item) return;
+  const child = data.children.find(entry => entry.id === item.childId);
+  const category = CATEGORIES[item.category];
+  const alert = getAlert(item);
+  const detailRows = summaryRows(item);
+  $("#itemSummaryDialog").dataset.itemId = item.id;
+  $("#summaryEyebrow").textContent = category.label;
+  $("#summaryTitle").textContent = itemTitle(item);
+  $("#summaryMain").style.setProperty("--summary", category.color);
+  $("#summaryMain").innerHTML = `
+    <span class="summary-icon">${category.icon}</span>
+    <div>
+      <strong>${escapeHTML(child?.name || "")}</strong>
+      <small>${formatDate(item.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}${item.time ? ` Â· ${escapeHTML(item.time)}` : ""}</small>
+      <small>${escapeHTML(item.reminder || "Aucun rappel")}${alert ? ` Â· ${escapeHTML(alert.text)}` : ""}</small>
+    </div>
+    <span class="event-tag" style="--event:${category.color}">${category.short}</span>
+  `;
+  $("#summaryDetails").innerHTML = detailRows.length ? detailRows.map(([label, value]) => `
+    <div class="summary-row"><span>${escapeHTML(label)}</span><strong>${escapeHTML(value)}</strong></div>
+  `).join("") : `<div class="empty-state"><strong>Aucun dÃ©tail</strong>Seules les informations essentielles sont renseignÃ©es.</div>`;
+  $("#itemSummaryDialog").showModal();
+}
+
+function summaryRows(item) {
+  const details = item.details || {};
+  const config = CATEGORIES[item.category];
+  const rows = [];
+  rows.push(["Statut", isDone(item) ? "TerminÃ©" : "Ã€ faire"]);
+  config.fields.forEach(([key, label, type]) => {
+    const value = details[key];
+    if (type === "checkbox") rows.push([label, value ? "Oui" : "Non"]);
+    else if (value) rows.push([label, String(value)]);
+  });
+  if (item.note) rows.push(["Note", item.note]);
+  if (item.attachment?.name) rows.push(["PiÃ¨ce jointe", item.attachment.name]);
+  return rows;
 }
 
 function renderCategory() {
@@ -783,6 +824,10 @@ function editItemFromAnywhere(id) {
   state.childId = item.childId;
   showView("child");
   openCategory(item.category, item.id);
+}
+
+function closeItemSummary() {
+  $("#itemSummaryDialog").close("cancel");
 }
 
 function renderChildrenManagement() {
@@ -1172,6 +1217,13 @@ function bindEvents() {
   $("#itemForm").addEventListener("submit", saveItem);
   $("#cancelItemButton").addEventListener("click", () => showChildHome("agenda"));
   $("#deleteInFormButton").addEventListener("click", () => requestDeleteItem($("#editingItemId").value));
+  $("#summaryBackButton").addEventListener("click", closeItemSummary);
+  $("#summaryCloseButton").addEventListener("click", closeItemSummary);
+  $("#summaryEditButton").addEventListener("click", () => {
+    const id = $("#itemSummaryDialog").dataset.itemId;
+    closeItemSummary();
+    editItemFromAnywhere(id);
+  });
   $("#childForm").addEventListener("submit", saveChild);
   $("#cancelChildButton").addEventListener("click", closeChildDialog);
   $("#cancelChildFormButton").addEventListener("click", closeChildDialog);

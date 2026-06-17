@@ -1,4 +1,4 @@
-const CACHE_NAME = "ecole-v1-20260617-3";
+const CACHE_NAME = "ecole-v1-20260617-4";
 const APP_FILES = [
   "./",
   "./index.html",

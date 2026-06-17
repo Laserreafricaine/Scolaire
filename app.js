@@ -105,9 +105,10 @@ const PRESET_AVATARS = [
 let data = loadData();
 let state = {
   view: "home",
+  activeNav: "home",
   childId: data.children[0]?.id || null,
   category: "homework",
-  calendarView: "week",
+  calendarView: "gantt",
   filter: "all",
   focusDate: toISODate(new Date()),
   selectedDate: null,
@@ -279,9 +280,10 @@ function showToast(message) {
 
 function showView(view) {
   state.view = view;
+  if (view === "home" || view === "settings") state.activeNav = view;
   document.body.classList.toggle("child-mode", view === "child");
   $$(".view").forEach(section => section.hidden = section.id !== `${view}View`);
-  $$("[data-nav]").forEach(button => button.classList.toggle("active", button.dataset.nav === view || (view === "child" && button.dataset.nav === "agenda")));
+  $$("[data-nav]").forEach(button => button.classList.toggle("active", button.dataset.nav === state.activeNav));
   if (view === "home") renderHome();
   if (view === "child") renderChild();
   if (view === "settings") {
@@ -332,17 +334,20 @@ function updateChildrenDots() {
 function openChild(id) {
   state.childId = id;
   state.selectedDate = null;
+  state.calendarView = "gantt";
+  state.activeNav = "child";
   showView("child");
 }
 
-function showChildHome(scrollTarget = "agenda") {
+function showChildHome(scrollTarget = "top", nav = "child") {
+  state.activeNav = nav;
   $("#categorySection").hidden = true;
   $("#agendaSection").hidden = false;
-  $("#schoolCards").hidden = false;
-  $("#childCategoryZone").hidden = false;
+  $("#schoolCards").hidden = true;
+  $("#childCategoryZone").hidden = true;
   $("#agendaListSection").hidden = false;
   showView("child");
-  const target = scrollTarget === "list" ? $("#agendaListSection") : $("#agendaSection");
+  const target = scrollTarget === "list" ? $("#agendaListSection") : scrollTarget === "agenda" ? $("#agendaSection") : $("#profileBanner");
   setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
 }
 
@@ -355,6 +360,7 @@ function renderChild() {
   const upcoming = getUpcoming(child.id);
   $("#profileBanner").style.setProperty("--child", child.color);
   $("#profileBanner").innerHTML = `${avatarHTML(child)}<span><p class="eyebrow">Son espace scolaire</p><h2>${escapeHTML(child.name)}</h2><small>${escapeHTML(child.className)} · ${escapeHTML(child.school)}</small><small>${escapeHTML(child.teacher || "Enseignant non renseigné")}</small></span><span class="profile-count">${upcoming.length} à venir</span>`;
+  $("#profileBanner").setAttribute("aria-label", `Ouvrir la carte de ${child.name}`);
   if (child.schoolPhone) $(".profile-count", $("#profileBanner")).previousElementSibling.insertAdjacentHTML("beforeend", `<small>Tel. ecole : ${escapeHTML(child.schoolPhone)}</small>`);
   $("#schoolCards").innerHTML = Object.entries(CATEGORIES).map(([key, category]) => {
     const items = childItems().filter(item => item.category === key && !isDone(item)).sort(sortItems);
@@ -390,7 +396,7 @@ function showAgenda() {
     }
     state.childId = data.children[0].id;
   }
-  showChildHome("agenda");
+  showChildHome("agenda", "agenda");
 }
 
 function renderAgenda() {
@@ -430,8 +436,7 @@ function renderAgenda() {
   }));
   $$("[data-gantt-item]", $("#calendar")).forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
-    const item = data.items.find(entry => entry.id === button.dataset.ganttItem);
-    openCategory(item.category, item.id);
+    openItemSummary(button.dataset.ganttItem);
   }));
   renderFilters();
   renderAgendaList(start, end);
@@ -557,20 +562,25 @@ function renderGantt(start, end) {
     .filter(item => state.filter === "all" || item.category === state.filter)
     .sort(sortItems);
   const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
-  const rows = items.length ? items.map(item => {
-    const dayIndex = Math.max(0, Math.round((fromISO(item.date) - start) / 86400000));
-    const category = CATEGORIES[item.category];
-    return `<div class="gantt-row">
-      <span class="gantt-label">${escapeHTML(itemTitle(item))}</span>
-      ${days.map(date => `<button class="gantt-cell ${toISODate(date) === toISODate(new Date()) ? "today" : ""}" data-calendar-date="${toISODate(date)}" type="button" aria-label="Ajouter le ${formatDate(date, { day: "numeric", month: "long" })}"></button>`).join("")}
-      <button class="gantt-bar" data-gantt-item="${item.id}" style="--event:${category.color};--day-index:${dayIndex}" type="button" title="${escapeHTML(itemTitle(item))}">${category.icon} ${escapeHTML(itemTitle(item))}</button>
-    </div>`;
-  }).join("") : `<div class="gantt-row"><span class="gantt-label">Aucun élément</span>${days.map(date => `<button class="gantt-cell" data-calendar-date="${toISODate(date)}" type="button" aria-label="Ajouter le ${formatDate(date, { day: "numeric", month: "long" })}"></button>`).join("")}</div>`;
+  const rows = days.map(date => {
+    const iso = toISODate(date);
+    const dayItems = items.filter(item => item.date === iso);
+    const today = iso === toISODate(new Date());
+    const content = dayItems.length ? dayItems.map(item => {
+      const category = CATEGORIES[item.category];
+      return `<button class="gantt-task ${isDone(item) ? "done" : ""}" data-gantt-item="${item.id}" style="--event:${category.color}" type="button">
+        <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${category.short}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
+      </button>`;
+    }).join("") : `<button class="gantt-empty-day" data-calendar-date="${iso}" type="button">Aucune tâche<br><small>Toucher pour ajouter</small></button>`;
+    return `<article class="gantt-day ${today ? "today" : ""}">
+      <button class="gantt-day-head" data-calendar-date="${iso}" type="button" aria-label="Ajouter le ${formatDate(date, { day: "numeric", month: "long" })}">
+        <span>${formatDate(date, { weekday: "short" })}</span><strong>${date.getDate()}</strong>
+      </button>
+      <div class="gantt-day-items">${content}</div>
+    </article>`;
+  }).join("");
   $("#calendar").className = "calendar gantt-calendar";
-  $("#calendar").innerHTML = `<div class="gantt-board">
-    <div class="gantt-head"><span>Élément</span>${days.map(date => `<span>${formatDate(date, { weekday: "short" })}<br>${date.getDate()}</span>`).join("")}</div>
-    ${rows}
-  </div>`;
+  $("#calendar").innerHTML = `<div class="gantt-board gantt-vertical">${rows}</div>`;
 }
 
 function renderFilters() {
@@ -597,11 +607,12 @@ function renderAgendaList(periodStart, periodEnd) {
       <span><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(itemDetails(item))}${item.time ? ` · ${escapeHTML(item.time)}` : ""}${isDone(item) ? " · terminé" : ""}</small></span>
       <span class="event-tag">${category.short}</span>
     </button>`;
-  }).join("") : `<div class="empty-state"><strong>Aucun élément</strong>La période et les filtres sélectionnés sont vides.</div>`;
+  }).join("") : `<button class="empty-state empty-action" id="emptyAgendaAction" type="button"><strong>Aucune tâche</strong>Toucher pour choisir une catégorie.</button>`;
   $$("[data-agenda-item]", $("#agendaList")).forEach(button => button.addEventListener("click", () => {
     const item = data.items.find(entry => entry.id === button.dataset.agendaItem);
     openItemSummary(item.id);
   }));
+  $("#emptyAgendaAction")?.addEventListener("click", openQuickAdd);
 }
 
 function openItemSummary(id) {
@@ -634,14 +645,14 @@ function summaryRows(item) {
   const details = item.details || {};
   const config = CATEGORIES[item.category];
   const rows = [];
-  rows.push(["Statut", isDone(item) ? "TerminÃ©" : "Ã€ faire"]);
+  rows.push(["Statut", isDone(item) ? "Terminé" : "À faire"]);
   config.fields.forEach(([key, label, type]) => {
     const value = details[key];
     if (type === "checkbox") rows.push([label, value ? "Oui" : "Non"]);
     else if (value) rows.push([label, String(value)]);
   });
   if (item.note) rows.push(["Note", item.note]);
-  if (item.attachment?.name) rows.push(["PiÃ¨ce jointe", item.attachment.name]);
+  if (item.attachment?.name) rows.push(["Pièce jointe", item.attachment.name]);
   return rows;
 }
 
@@ -678,12 +689,13 @@ function buildItemFields(category) {
     `<fieldset class="button-choice-field field full"><legend>Rappel</legend><input data-item-field="reminder" type="hidden"><div class="choice-buttons reminder-choice-buttons">${data.refs.reminderOptions.map(option => `<button data-reminder-choice="${escapeHTML(option)}" type="button">${escapeHTML(option)}</button>`).join("")}</div></fieldset>`
   ].join("");
   $("#moreFieldsPanel").hidden = !extras.length;
-  const suggestions = category.subjectRef ? data.refs[category.subjectRef] : data.refs.suggestions;
+  const suggestions = state.category === "meetings" ? [] : category.subjectRef ? data.refs[category.subjectRef] : data.refs.suggestions;
+  const suggestionTarget = state.category === "supplies" ? '[data-item-field="use"]' : "[data-item-field]";
   $("#suggestionBox").hidden = !suggestions?.length;
   $("#suggestions").innerHTML = (suggestions || []).slice(0, 8).map(value => `<button data-suggestion="${escapeHTML(value)}" type="button">${escapeHTML(value)}</button>`).join("");
   $$("[data-suggestion]", $("#suggestions")).forEach(button => button.addEventListener("click", () => {
-    const first = $("[data-item-field]", $("#mainFields"));
-    if (first) first.value = button.dataset.suggestion;
+    const target = $(suggestionTarget, $("#mainFields"));
+    if (target) target.value = button.dataset.suggestion;
   }));
   $$("[data-reminder-choice]", $("#dateFields")).forEach(button => button.addEventListener("click", () => setReminderChoice(button.dataset.reminderChoice)));
 }
@@ -828,6 +840,42 @@ function editItemFromAnywhere(id) {
 
 function closeItemSummary() {
   $("#itemSummaryDialog").close("cancel");
+}
+
+function openChildSummary() {
+  const child = currentChild();
+  if (!child) return;
+  $("#childSummaryTitle").textContent = child.name;
+  $("#childSummaryMain").style.setProperty("--summary", child.color || "#2457e6");
+  $("#childSummaryMain").innerHTML = `
+    ${avatarHTML(child, "avatar summary-avatar")}
+    <div>
+      <strong>${escapeHTML(child.name)}</strong>
+      <small>${escapeHTML(child.className)} · ${escapeHTML(child.school)}</small>
+      <small>${escapeHTML(child.teacher || "Enseignant non renseigné")}</small>
+    </div>
+    <span class="profile-count">${getUpcoming(child.id).length} à venir</span>
+  `;
+  $("#childSummaryDetails").innerHTML = [
+    ["Classe", child.className],
+    ["Établissement", child.school],
+    ["Téléphone école", child.schoolPhone || "Non renseigné"],
+    ["Enseignant", child.teacher || "Non renseigné"]
+  ].map(([label, value]) => `<div class="summary-row"><span>${escapeHTML(label)}</span><strong>${escapeHTML(value)}</strong></div>`).join("");
+  $("#childSummaryDialog").showModal();
+}
+
+function closeChildSummary() {
+  $("#childSummaryDialog").close("cancel");
+}
+
+function editCurrentChildFromSummary() {
+  const child = currentChild();
+  if (!child) return;
+  closeChildSummary();
+  state.activeNav = "settings";
+  showView("settings");
+  openChildDialog(child.id);
 }
 
 function renderChildrenManagement() {
@@ -1192,7 +1240,9 @@ function setupMobileViewport() {
 
   document.addEventListener("focusin", event => {
     if (!event.target.matches("input, select, textarea")) return;
-    setTimeout(() => event.target.scrollIntoView({ behavior: "smooth", block: "center" }), 180);
+    if (event.target.matches('input[type="date"], input[type="time"]')) return;
+    if (!document.body.classList.contains("keyboard-open")) return;
+    setTimeout(() => event.target.scrollIntoView({ behavior: "auto", block: "nearest" }), 220);
   });
 }
 
@@ -1212,6 +1262,7 @@ function bindEvents() {
   $("#topSettingsButton").addEventListener("click", () => showView("settings"));
   $("#addChildSettingsButton").addEventListener("click", () => openChildDialog());
   $("#backHomeButton").addEventListener("click", () => showView("home"));
+  $("#profileBanner").addEventListener("click", openChildSummary);
   $("#backAgendaButton").addEventListener("click", () => showChildHome("agenda"));
   $("#agendaAddButton").addEventListener("click", openQuickAdd);
   $("#itemForm").addEventListener("submit", saveItem);
@@ -1224,6 +1275,9 @@ function bindEvents() {
     closeItemSummary();
     editItemFromAnywhere(id);
   });
+  $("#childSummaryBackButton").addEventListener("click", closeChildSummary);
+  $("#childSummaryCloseButton").addEventListener("click", closeChildSummary);
+  $("#childSummaryEditButton").addEventListener("click", editCurrentChildFromSummary);
   $("#childForm").addEventListener("submit", saveChild);
   $("#cancelChildButton").addEventListener("click", closeChildDialog);
   $("#cancelChildFormButton").addEventListener("click", closeChildDialog);
@@ -1268,6 +1322,7 @@ function bindEvents() {
   });
   $$("[data-nav]").forEach(button => button.addEventListener("click", () => {
     if (button.dataset.nav === "agenda") showAgenda();
+    else if (button.dataset.nav === "child") showChildHome("top", "child");
     else showView(button.dataset.nav);
   }));
   $("#confirmDialog").addEventListener("close", () => {

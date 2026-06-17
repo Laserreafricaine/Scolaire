@@ -26,14 +26,7 @@
       <button class="icon-button" id="topSettingsButton" type="button" aria-label="Ouvrir les réglages">⚙</button>
     </header>
 
-    <section id="homeView" class="view" aria-labelledby="homeTitle">
-      <div class="section-heading home-heading">
-        <div>
-          <p class="eyebrow">Choisir un enfant</p>
-          <h1 id="homeTitle">Quel enfant aujourd’hui ?</h1>
-          <p>Faites défiler les cartes, puis touchez un enfant pour ouvrir son espace.</p>
-        </div>
-      </div>
+    <section id="homeView" class="view" aria-label="Accueil">
       <div class="children-grid" id="childrenGrid"></div>
       <div class="carousel-dots" id="childrenDots"></div>
       <section class="panel family-agenda" id="familyAgendaSection">
@@ -64,7 +57,7 @@
 
     <section id="childView" class="view" hidden>
       <button class="back-button" id="backHomeButton" type="button">‹ Tous les enfants</button>
-      <section class="profile-banner" id="profileBanner"></section>
+      <button class="profile-banner" id="profileBanner" type="button"></button>
 
       <section class="panel agenda" id="agendaSection">
         <div class="panel-heading">
@@ -94,11 +87,7 @@
         <div class="event-list" id="agendaList"></div>
       </section>
 
-      <section class="category-zone" id="childCategoryZone">
-        <div class="section-line">
-          <p class="eyebrow">Accès par type</p>
-          <h2>Catégories</h2>
-        </div>
+      <section class="category-zone" id="childCategoryZone" hidden>
         <section class="school-cards" id="schoolCards" aria-label="Catégories scolaires"></section>
       </section>
 
@@ -143,7 +132,7 @@
     </section>
 
     <section id="settingsView" class="view" hidden>
-      <div class="section-heading"><div><p class="eyebrow">Personnalisation</p><h1>Réglages</h1><p>Vos données restent sur cet appareil.</p></div></div>
+      <div class="section-heading"><div><p class="eyebrow">Personnalisation</p><h1>Réglage</h1><p>Vos données restent sur cet appareil.</p></div></div>
       <section class="panel settings-group children-settings">
         <div class="panel-heading">
           <div><h2>Enfants</h2><p class="settings-help">Ajoutez, modifiez ou supprimez les profils scolaires.</p></div>
@@ -157,8 +146,9 @@
 
   <nav class="bottom-nav" aria-label="Navigation principale">
     <button data-nav="home" type="button"><span>⌂</span><small>Accueil</small></button>
+    <button data-nav="child" type="button"><span>●</span><small>Enfant</small></button>
     <button data-nav="agenda" type="button"><span>▦</span><small>Agenda</small></button>
-    <button data-nav="settings" type="button"><span>⚙</span><small>Réglages</small></button>
+    <button data-nav="settings" type="button"><span>⚙</span><small>Réglage</small></button>
   </nav>
 
   <dialog id="childDialog">
@@ -214,6 +204,21 @@
       <div class="form-actions">
         <button class="secondary-button" id="summaryBackButton" type="button">Retour à l’agenda</button>
         <button class="primary-button" id="summaryEditButton" type="button">Modifier</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="childSummaryDialog">
+    <form method="dialog" class="dialog-card item-summary-card">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">Carte enfant</p><h2 id="childSummaryTitle"></h2></div>
+        <button class="dialog-close" id="childSummaryCloseButton" type="button" aria-label="Retour">×</button>
+      </div>
+      <div class="summary-main child-summary-main" id="childSummaryMain"></div>
+      <div class="summary-details" id="childSummaryDetails"></div>
+      <div class="form-actions">
+        <button class="secondary-button" id="childSummaryBackButton" type="button">Retour</button>
+        <button class="primary-button" id="childSummaryEditButton" type="button">Modifier</button>
       </div>
     </form>
   </dialog>

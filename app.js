@@ -112,7 +112,7 @@ let state = {
   filter: "all",
   focusDate: toISODate(new Date()),
   selectedDate: null,
-  familyCalendarView: "week",
+  familyCalendarView: "gantt",
   familyFilter: "all",
   familyFocusDate: toISODate(new Date()),
   familySelectedDate: null,
@@ -302,6 +302,10 @@ function showToast(message) {
 function showView(view) {
   state.view = view;
   if (view === "home" || view === "settings") state.activeNav = view;
+  if (view === "home") {
+    state.familyCalendarView = "gantt";
+    state.familySelectedDate = null;
+  }
   document.body.classList.toggle("child-mode", view === "child");
   $$(".view").forEach(section => section.hidden = section.id !== `${view}View`);
   $$("[data-nav]").forEach(button => button.classList.toggle("active", button.dataset.nav === state.activeNav));
@@ -343,6 +347,7 @@ function renderHome() {
 
 function renderChildrenDots() {
   const dots = $("#childrenDots");
+  dots.style.display = data.children.length > 1 ? "flex" : "none";
   dots.innerHTML = data.children.map((_, index) => `<span class="${index === 0 ? "active" : ""}"></span>`).join("");
 }
 
@@ -503,7 +508,7 @@ function renderFamilyAgenda() {
   }));
   $$("[data-family-gantt-item]", $("#familyCalendar")).forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
-    editItemFromAnywhere(button.dataset.familyGanttItem);
+    openItemSummary(button.dataset.familyGanttItem);
   }));
   renderFamilyFilters();
   renderFamilyAgendaList(start, end);
@@ -525,18 +530,26 @@ function renderFamilyGantt(start, end) {
     .filter(item => state.familyFilter === "all" || item.category === state.familyFilter)
     .sort(sortItems);
   const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
-  const rows = items.length ? items.map(item => {
-    const child = data.children.find(entry => entry.id === item.childId);
-    const dayIndex = Math.max(0, Math.round((fromISO(item.date) - start) / 86400000));
-    const category = CATEGORIES[item.category];
-    return `<div class="gantt-row">
-      <span class="gantt-label"><b>${escapeHTML(child?.name || "")}</b><small>${escapeHTML(itemTitle(item))}</small></span>
-      ${days.map(date => `<button class="gantt-cell ${toISODate(date) === toISODate(new Date()) ? "today" : ""}" data-family-calendar-date="${toISODate(date)}" type="button"></button>`).join("")}
-      <button class="gantt-bar" data-family-gantt-item="${item.id}" style="--event:${child?.color || category.color};--day-index:${dayIndex}" type="button">${category.icon} ${escapeHTML(child?.name || "")}</button>
-    </div>`;
-  }).join("") : `<div class="gantt-row"><span class="gantt-label">Aucun élément</span>${days.map(date => `<button class="gantt-cell" data-family-calendar-date="${toISODate(date)}" type="button"></button>`).join("")}</div>`;
+  const rows = days.map(date => {
+    const iso = toISODate(date);
+    const dayItems = items.filter(item => item.date === iso);
+    const today = iso === toISODate(new Date());
+    const content = dayItems.length ? dayItems.map(item => {
+      const category = CATEGORIES[item.category];
+      const child = data.children.find(entry => entry.id === item.childId);
+      return `<button class="gantt-task ${isDone(item) ? "done" : ""} ${isOverdue(item) ? "urgent-event" : ""}" data-family-gantt-item="${item.id}" style="--event:${child?.color || category.color}" type="button">
+        <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(child?.name || "")} · ${category.short}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
+      </button>`;
+    }).join("") : `<div class="gantt-empty-day gantt-empty-static">Aucune tâche</div>`;
+    return `<article class="gantt-day ${today ? "today" : ""}">
+      <button class="gantt-day-head" data-family-calendar-date="${iso}" type="button">
+        <span>${formatDate(date, { weekday: "short" })}</span><strong>${date.getDate()}</strong>
+      </button>
+      <div class="gantt-day-items">${content}</div>
+    </article>`;
+  }).join("");
   $("#familyCalendar").className = "calendar gantt-calendar";
-  $("#familyCalendar").innerHTML = `<div class="gantt-board"><div class="gantt-head"><span>Enfant · élément</span>${days.map(date => `<span>${formatDate(date, { weekday: "short" })}<br>${date.getDate()}</span>`).join("")}</div>${rows}</div>`;
+  $("#familyCalendar").innerHTML = `<div class="gantt-board gantt-vertical">${rows}</div>`;
 }
 
 function renderFamilyFilters() {
@@ -1317,10 +1330,12 @@ function shiftFamilyPeriod(direction) {
 }
 
 function openQuickAdd() {
-  $("#quickCategoryGrid").innerHTML = Object.entries(CATEGORIES).map(([key, category]) => `<button class="quick-category" style="--category:${category.color}" data-quick-category="${key}" value="cancel">${category.icon}<br>${category.label}</button>`).join("");
+  $("#quickCategoryGrid").innerHTML = Object.entries(CATEGORIES).map(([key, category]) => `<button class="quick-category" type="button" style="--category:${category.color}" data-quick-category="${key}">${category.icon}<br>${category.label}</button>`).join("");
   $$("[data-quick-category]", $("#quickCategoryGrid")).forEach(button => button.addEventListener("click", () => {
-    $("#quickAddDialog").close();
-    openCategory(button.dataset.quickCategory);
+    const category = button.dataset.quickCategory;
+    const dialog = $("#quickAddDialog");
+    dialog.addEventListener("close", () => openCategory(category), { once: true });
+    dialog.close();
   }));
   $("#quickAddDialog").showModal();
 }

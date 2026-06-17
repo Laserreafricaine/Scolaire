@@ -11,7 +11,7 @@ const CATEGORIES = {
     label: "Devoirs", short: "Devoirs", icon: "✎", color: "#2457e6",
     eyebrow: "Le travail à faire", titleField: "work", subjectRef: "subjects",
     fields: [
-      ["subject", "Matière", "text", true, "Ex. Mathématiques", "subjects"],
+      ["subject", "Matière", "text", false, "Ex. Mathématiques", "subjects"],
       ["work", "Travail demandé", "text", true, "Ex. exercices 4 et 5 page 82"],
       ["manual", "Manuel, page ou exercice", "text", false, "Ex. page 82, exercice 4"],
       ["estimatedTime", "Temps estimé", "text", false, "Ex. 30 minutes"]
@@ -21,7 +21,7 @@ const CATEGORIES = {
     label: "Contrôles et notes", short: "Contrôles", icon: "✓", color: "#f02f78",
     eyebrow: "Évaluations et résultats", titleField: "topic", subjectRef: "subjects",
     fields: [
-      ["subject", "Matière", "text", true, "Ex. Français", "subjects"],
+      ["subject", "Matière", "text", false, "Ex. Français", "subjects"],
       ["topic", "Sujet ou chapitre", "text", true, "Ex. dictée, chapitre 6"],
       ["revision", "Révisions", "textarea", false, "Points à revoir"],
       ["score", "Note obtenue", "text", false, "Ex. 15"],
@@ -34,7 +34,7 @@ const CATEGORIES = {
     eyebrow: "Activités hors de l’école", titleField: "name",
     fields: [
       ["name", "Nom", "text", true, "Ex. visite du musée"],
-      ["location", "Lieu", "text", true, "Adresse ou lieu"],
+      ["location", "Lieu", "text", false, "Adresse ou lieu"],
       ["schedule", "Horaires", "text", false, "Ex. 8 h 30 - 16 h"],
       ["group", "Classe ou groupe", "text", false, "Ex. CM2 A"],
       ["companion", "Accompagnateur", "text", false, "Nom ou rôle"],
@@ -62,7 +62,7 @@ const CATEGORIES = {
     fields: [
       ["person", "Personne rencontrée", "text", true, "Ex. Mme Martin"],
       ["role", "Rôle", "text", false, "Ex. enseignante"],
-      ["reason", "Motif", "text", true, "Ex. bilan du trimestre"],
+      ["reason", "Motif", "text", false, "Ex. bilan du trimestre"],
       ["location", "Lieu", "text", false, "Ex. salle 12"],
       ["questions", "Questions", "textarea", false, "Questions à poser"],
       ["report", "Compte rendu", "textarea", false, "Notes après le rendez-vous"]
@@ -73,7 +73,7 @@ const CATEGORIES = {
     eyebrow: "École, administration et cantine", titleField: "documentType",
     fields: [
       ["documentType", "Type de document", "text", true, "Ex. Cantine", "documentTypes"],
-      ["service", "Service concerné", "text", true, "Ex. Administration", "services"],
+      ["service", "Service concerné", "text", false, "Ex. Administration", "services"],
       ["receivedDate", "Date de réception", "date", false],
       ["signatureRequired", "Signature nécessaire", "checkbox", false],
       ["submitted", "Remis", "checkbox", false]
@@ -238,6 +238,16 @@ function getUpcoming(childId, includeDone = false) {
 
 function sortItems(a, b) {
   return `${a.date || "9999"}T${a.time || "23:59"}`.localeCompare(`${b.date || "9999"}T${b.time || "23:59"}`);
+}
+
+function timeShift(time) {
+  if (!time) return 0;
+  const hour = Number(time.split(":")[0]);
+  if (Number.isNaN(hour)) return 0;
+  if (hour < 10) return 0;
+  if (hour < 13) return 10;
+  if (hour < 16) return 20;
+  return 30;
 }
 
 function getAlert(item) {
@@ -479,7 +489,7 @@ function renderFamilyAgenda() {
   }));
   $$("[data-family-gantt-item]", $("#familyCalendar")).forEach(button => button.addEventListener("click", event => {
     event.stopPropagation();
-    editItemFromAnywhere(button.dataset.familyGanttItem);
+    openItemSummary(button.dataset.familyGanttItem);
   }));
   renderFamilyFilters();
   renderFamilyAgendaList(start, end);
@@ -501,18 +511,26 @@ function renderFamilyGantt(start, end) {
     .filter(item => state.familyFilter === "all" || item.category === state.familyFilter)
     .sort(sortItems);
   const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
-  const rows = items.length ? items.map(item => {
-    const child = data.children.find(entry => entry.id === item.childId);
-    const dayIndex = Math.max(0, Math.round((fromISO(item.date) - start) / 86400000));
-    const category = CATEGORIES[item.category];
-    return `<div class="gantt-row">
-      <span class="gantt-label"><b>${escapeHTML(child?.name || "")}</b><small>${escapeHTML(itemTitle(item))}</small></span>
-      ${days.map(date => `<button class="gantt-cell ${toISODate(date) === toISODate(new Date()) ? "today" : ""}" data-family-calendar-date="${toISODate(date)}" type="button"></button>`).join("")}
-      <button class="gantt-bar" data-family-gantt-item="${item.id}" style="--event:${category.color};--day-index:${dayIndex}" type="button">${category.icon} ${escapeHTML(child?.name || "")}</button>
-    </div>`;
-  }).join("") : `<div class="gantt-row"><span class="gantt-label">Aucun élément</span>${days.map(date => `<button class="gantt-cell" data-family-calendar-date="${toISODate(date)}" type="button"></button>`).join("")}</div>`;
+  const rows = days.map(date => {
+    const iso = toISODate(date);
+    const dayItems = items.filter(item => item.date === iso);
+    const today = iso === toISODate(new Date());
+    const content = dayItems.length ? dayItems.map(item => {
+      const child = data.children.find(entry => entry.id === item.childId);
+      const category = CATEGORIES[item.category];
+      return `<button class="gantt-task ${isDone(item) ? "done" : ""}" data-family-gantt-item="${item.id}" style="--event:${category.color};--shift:${timeShift(item.time)}px" type="button">
+        <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${escapeHTML(child?.name || "")}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
+      </button>`;
+    }).join("") : `<button class="gantt-empty-day" data-family-calendar-date="${iso}" type="button">Aucune tâche<br><small>Toucher pour ce jour</small></button>`;
+    return `<article class="gantt-day ${today ? "today" : ""}">
+      <button class="gantt-day-head" data-family-calendar-date="${iso}" type="button">
+        <span>${formatDate(date, { weekday: "short" })}</span><strong>${date.getDate()}</strong>
+      </button>
+      <div class="gantt-day-items">${content}</div>
+    </article>`;
+  }).join("");
   $("#familyCalendar").className = "calendar gantt-calendar";
-  $("#familyCalendar").innerHTML = `<div class="gantt-board"><div class="gantt-head"><span>Enfant · élément</span>${days.map(date => `<span>${formatDate(date, { weekday: "short" })}<br>${date.getDate()}</span>`).join("")}</div>${rows}</div>`;
+  $("#familyCalendar").innerHTML = `<div class="gantt-board gantt-vertical">${rows}</div>`;
 }
 
 function renderFamilyFilters() {
@@ -568,7 +586,7 @@ function renderGantt(start, end) {
     const today = iso === toISODate(new Date());
     const content = dayItems.length ? dayItems.map(item => {
       const category = CATEGORIES[item.category];
-      return `<button class="gantt-task ${isDone(item) ? "done" : ""}" data-gantt-item="${item.id}" style="--event:${category.color}" type="button">
+      return `<button class="gantt-task ${isDone(item) ? "done" : ""}" data-gantt-item="${item.id}" style="--event:${category.color};--shift:${timeShift(item.time)}px" type="button">
         <span>${category.icon}</span><strong>${escapeHTML(itemTitle(item))}</strong><small>${category.short}${item.time ? ` · ${escapeHTML(item.time)}` : ""}</small>
       </button>`;
     }).join("") : `<button class="gantt-empty-day" data-calendar-date="${iso}" type="button">Aucune tâche<br><small>Toucher pour ajouter</small></button>`;
@@ -679,8 +697,12 @@ function renderCategory() {
 }
 
 function buildItemFields(category) {
-  const main = category.fields.slice(0, 2);
-  const extras = category.fields.slice(2);
+  const requiredFields = category.fields.filter(field => field[3]);
+  const main = [...requiredFields];
+  category.fields.forEach(field => {
+    if (main.length < 2 && !main.some(entry => entry[0] === field[0])) main.push(field);
+  });
+  const extras = category.fields.filter(field => !main.some(entry => entry[0] === field[0]));
   $("#mainFields").innerHTML = main.map(fieldHTML).join("");
   $("#extraFields").innerHTML = extras.map(fieldHTML).join("");
   $("#dateFields").innerHTML = [
@@ -690,7 +712,7 @@ function buildItemFields(category) {
   ].join("");
   $("#moreFieldsPanel").hidden = !extras.length;
   const suggestions = state.category === "meetings" ? [] : category.subjectRef ? data.refs[category.subjectRef] : data.refs.suggestions;
-  const suggestionTarget = state.category === "supplies" ? '[data-item-field="use"]' : "[data-item-field]";
+  const suggestionTarget = state.category === "supplies" ? '[data-item-field="use"]' : category.subjectRef ? '[data-item-field="subject"]' : "[data-item-field]";
   $("#suggestionBox").hidden = !suggestions?.length;
   $("#suggestions").innerHTML = (suggestions || []).slice(0, 8).map(value => `<button data-suggestion="${escapeHTML(value)}" type="button">${escapeHTML(value)}</button>`).join("");
   $$("[data-suggestion]", $("#suggestions")).forEach(button => button.addEventListener("click", () => {

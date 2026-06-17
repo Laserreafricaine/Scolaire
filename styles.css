@@ -48,13 +48,13 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .home-heading h1 { font-size: 28px; }
 
 .children-grid {
-  display: grid; grid-template-columns: 1fr;
-  gap: 14px; overflow: visible; padding: 5px 2px 12px;
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(278px, 88%);
+  gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 5px 2px 12px; scrollbar-width: none;
 }
 .children-grid::-webkit-scrollbar { display: none; }
 .child-card {
   --child: var(--blue);
-  min-height: 430px; display: grid; grid-template-columns: 76px 1fr; align-content: start; gap: 14px;
+  min-height: 470px; scroll-snap-align: center; display: grid; grid-template-columns: 76px 1fr; align-content: start; gap: 14px;
   border: 0; border-radius: 30px; padding: 22px;
   background: linear-gradient(160deg, color-mix(in srgb, var(--child) 16%, white), white 55%);
   color: var(--ink); text-align: left; box-shadow: var(--shadow);
@@ -76,7 +76,7 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .child-school-phone { grid-column: 1 / -1; border-radius: 15px; padding: 10px 12px; background: #edf7ff; color: var(--child); font-size: 14px; font-weight: 800; }
 .child-alert { grid-column: 1 / -1; border-radius: 16px; padding: 11px 12px; background: #fff0f1; color: var(--danger); font-size: 14px; font-weight: 800; }
 .enter-child-hint { grid-column: 1 / -1; align-self: end; min-height: 50px; display: grid; place-items: center; border-radius: 15px; background: var(--child); color: white; font: 800 16px "Baloo 2", sans-serif; }
-.carousel-dots { display: none; justify-content: center; gap: 7px; margin: 2px 0 14px; }
+.carousel-dots { display: flex; justify-content: center; gap: 7px; margin: 2px 0 14px; }
 .carousel-dots span { width: 8px; height: 8px; border-radius: 999px; background: #bed0e8; }
 .carousel-dots span.active { width: 24px; background: var(--blue); }
 .family-agenda { margin-top: 14px; border-color: #efd591; background: #fff8df; }
@@ -180,6 +180,7 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .gantt-day-items { display: grid; gap: 6px; }
 .gantt-task {
   min-height: 44px; display: grid; grid-template-columns: 30px 1fr; align-items: center; gap: 7px;
+  margin-left: var(--shift, 0); width: calc(100% - var(--shift, 0px));
   border: 0; border-radius: 13px; padding: 7px 9px; background: var(--event); color: white; text-align: left;
 }
 .gantt-task.done { opacity: .6; }
@@ -267,7 +268,10 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .form-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 11px; }
 .form-actions.editing { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .form-actions .primary-button { width: 100%; }
-.form-return-button { width: 100%; min-height: 52px; margin-bottom: 13px; border-radius: 16px; font-size: 15px; }
+.form-return-button {
+  width: 100%; min-height: 64px; margin-bottom: 16px; border-radius: 20px; padding: 12px 16px;
+  background: var(--blue); color: white; font-size: 18px; line-height: 1.1; box-shadow: 0 10px 22px rgba(36, 87, 230, .2);
+}
 .detail-list-head { margin: 19px 2px 9px; }
 .detail-list-head p { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
 .detail-list { display: grid; gap: 8px; }
@@ -361,8 +365,8 @@ dialog::backdrop { background: rgba(18, 33, 61, .58); backdrop-filter: blur(3px)
 
 @media (max-width: 390px) {
   .app { padding-left: 9px; padding-right: 9px; }
-  .children-grid { grid-template-columns: 1fr; }
-  .child-card { min-height: 430px; }
+  .children-grid { grid-template-columns: none; }
+  .child-card { min-height: 450px; }
   .profile-banner { grid-template-columns: 42px 1fr auto; }
   .profile-count { grid-column: auto; justify-self: auto; }
   .school-card { min-height: 96px; padding: 7px; }

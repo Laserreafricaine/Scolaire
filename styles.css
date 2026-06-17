@@ -44,7 +44,7 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .empty-state { padding: 24px 14px; border: 1px dashed #b9cde0; border-radius: 18px; color: var(--muted); font-size: 14px; line-height: 1.4; text-align: center; }
 .empty-state strong { display: block; margin-bottom: 5px; color: var(--ink); font-size: 16px; }
 
-.home-heading { align-items: flex-start; }
+.home-heading { align-items: flex-start; border: 1px solid #cfe0ff; border-radius: 22px; padding: 14px; background: #edf5ff; box-shadow: var(--shadow); }
 .home-heading h1 { font-size: 28px; }
 
 .children-grid {
@@ -73,12 +73,16 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .child-summary { grid-column: 1 / -1; border-radius: 18px; padding: 14px; background: white; color: var(--muted); font-size: 15px; font-weight: 800; line-height: 1.4; box-shadow: 0 8px 18px rgba(30,70,120,.07); }
 .child-summary b { color: var(--child); font-size: 28px; }
 .child-summary span { display: block; margin-top: 5px; color: var(--muted); font-size: 14px; }
+.child-school-phone { grid-column: 1 / -1; border-radius: 15px; padding: 10px 12px; background: #edf7ff; color: var(--child); font-size: 14px; font-weight: 800; }
 .child-alert { grid-column: 1 / -1; border-radius: 16px; padding: 11px 12px; background: #fff0f1; color: var(--danger); font-size: 14px; font-weight: 800; }
 .enter-child-hint { grid-column: 1 / -1; align-self: end; min-height: 50px; display: grid; place-items: center; border-radius: 15px; background: var(--child); color: white; font: 800 16px "Baloo 2", sans-serif; }
 .carousel-dots { display: flex; justify-content: center; gap: 7px; margin: 2px 0 14px; }
 .carousel-dots span { width: 8px; height: 8px; border-radius: 999px; background: #bed0e8; }
 .carousel-dots span.active { width: 24px; background: var(--blue); }
-.family-agenda { margin-top: 14px; }
+.family-agenda { margin-top: 14px; border-color: #efd591; background: #fff8df; }
+.family-agenda .calendar { background: #eefaff; }
+.family-agenda .filter-row { border-radius: 16px; padding: 8px; background: #f5efff; }
+.family-agenda .event-list { border-radius: 16px; padding: 8px; background: #ffffff; }
 .family-agenda-count { min-height: 30px; display: grid; place-items: center; border-radius: 999px; padding: 5px 9px; background: #eaf1ff; color: var(--blue); font-size: 11px; font-weight: 800; }
 .alert-count, .category-count, .detail-list-head > span { min-height: 30px; display: grid; place-items: center; border-radius: 999px; padding: 5px 9px; background: #fff0f1; color: var(--danger); font-size: 9px; font-weight: 800; }
 .family-alert { display: grid; grid-template-columns: 47px 1fr; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
@@ -104,7 +108,7 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .profile-banner {
   --child: var(--blue);
   display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 9px; border-radius: 17px; padding: 9px 10px;
-  background: color-mix(in srgb, var(--child) 13%, white); box-shadow: var(--shadow);
+  border: 1px solid #cdd9ff; background: linear-gradient(135deg, color-mix(in srgb, var(--child) 15%, white), #f5f7ff); box-shadow: var(--shadow);
 }
 .profile-banner .avatar { width: 44px; height: 44px; border-radius: 14px; font-size: 15px; }
 .profile-banner h2 { color: var(--child); }
@@ -122,9 +126,9 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .school-card small { grid-column: 1 / -1; overflow: hidden; color: var(--muted); font: 600 10.5px/1.2 Inter, sans-serif; white-space: nowrap; text-overflow: ellipsis; }
 .school-card b { grid-column: 3; grid-row: 1; min-width: 19px; height: 19px; display: grid; place-items: center; align-self: start; border-radius: 999px; background: var(--card); color: white; font-size: 9px; }
 
-.agenda { padding: 10px; border-radius: 17px; }
-.agenda-list-panel { margin-top: 8px; padding: 10px; border-radius: 17px; }
-.category-zone { margin-top: 14px; }
+.agenda { padding: 10px; border-radius: 17px; border-color: #b8daf5; background: #edf8ff; }
+.agenda-list-panel { margin-top: 8px; padding: 10px; border-radius: 17px; border-color: #f2d491; background: #fff8e3; }
+.category-zone { margin-top: 14px; border: 1px solid #d9caf8; border-radius: 19px; padding: 11px; background: #f6f0ff; box-shadow: var(--shadow); }
 .section-line { margin: 0 2px 9px; }
 .view-switch { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 8px 0 7px; padding: 4px; border-radius: 12px; background: #e9f0f7; }
 .view-switch button { min-height: 36px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 800; }
@@ -150,9 +154,9 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .day-calendar small { display: block; margin-top: 5px; color: var(--blue); font: 700 12px Inter, sans-serif; }
 .month-weekdays { margin-bottom: 4px; color: var(--muted); font-size: 10px; font-weight: 800; text-align: center; }
 .month-day { min-height: 43px; font-size: 12px; font-weight: 800; }
-.gantt-calendar { overflow-x: auto; padding: 0; scrollbar-width: thin; overscroll-behavior-x: contain; }
-.gantt-board { min-width: 570px; background: white; }
-.gantt-head, .gantt-row { display: grid; grid-template-columns: 138px repeat(7, 62px); }
+.gantt-calendar { overflow-x: hidden; padding: 0; }
+.gantt-board { --label-width: 92px; min-width: 0; width: 100%; background: white; }
+.gantt-head, .gantt-row { display: grid; grid-template-columns: minmax(92px, 1.25fr) repeat(7, minmax(0, 1fr)); }
 .gantt-head { position: sticky; top: 0; z-index: 2; background: #edf3fa; }
 .gantt-head span { min-height: 38px; display: grid; place-items: center; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 800; text-align: center; }
 .gantt-row { position: relative; min-height: 45px; }
@@ -160,12 +164,11 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .gantt-label small { margin-top: 2px; color: var(--muted); font-size: 10px; white-space: nowrap; }
 .gantt-cell { min-height: 45px; border: 0; border-right: 1px solid #edf1f5; border-bottom: 1px solid #edf1f5; background: transparent; }
 .gantt-cell.today { background: #f0f5ff; }
-.gantt-bar { position: absolute; z-index: 1; top: 9px; height: 27px; display: flex; align-items: center; overflow: hidden; border: 0; border-radius: 8px; padding: 0 7px; background: var(--event); color: white; font-size: 11px; font-weight: 800; white-space: nowrap; text-overflow: ellipsis; }
-.filter-row { display: flex; gap: 6px; margin: 11px 0 15px; overflow-x: auto; scrollbar-width: none; }
-.filter-row button { min-height: 38px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 999px; padding: 6px 11px; background: white; color: var(--muted); font-size: 12px; font-weight: 800; }
+.gantt-bar { position: absolute; z-index: 1; top: 9px; left: calc(var(--label-width) + ((100% - var(--label-width)) / 7 * var(--day-index)) + 2px); width: calc((100% - var(--label-width)) / 7 - 4px); height: 27px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 0; border-radius: 8px; padding: 0 4px; background: var(--event); color: white; font-size: 10px; font-weight: 800; white-space: nowrap; text-overflow: ellipsis; }
+.filter-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 11px 0 15px; overflow: visible; }
+.filter-row button { min-height: 38px; width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 999px; padding: 6px 5px; background: white; color: var(--muted); font-size: 11px; font-weight: 800; line-height: 1.05; white-space: normal; }
 .filter-row button.active { border-color: var(--blue); background: var(--blue); color: white; }
-.family-agenda .filter-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; overflow: visible; }
-.family-agenda .filter-row button { width: 100%; min-width: 0; padding-inline: 5px; white-space: normal; line-height: 1.05; }
+.family-agenda .filter-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .event-list-head { align-items: flex-end; }
 .event-list-head span { color: var(--muted); font-size: 11px; font-weight: 800; }
 .event-list { display: grid; gap: 8px; margin-top: 9px; }
@@ -237,9 +240,10 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
 .more-fields summary { min-height: 48px; padding: 13px; color: var(--detail); font-weight: 800; cursor: pointer; }
 .more-fields .fields-grid { padding: 0 13px 13px; }
 .note-field, .attachment-field { margin-top: 11px; border: 1px solid var(--line); border-radius: 16px; padding: 12px; background: #f8fbfe; }
-.form-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 11px; }
-.form-actions.editing { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.form-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 11px; }
+.form-actions.editing { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .form-actions .primary-button { width: 100%; }
+.form-return-button { width: 100%; min-height: 52px; margin-bottom: 13px; border-radius: 16px; font-size: 15px; }
 .detail-list-head { margin: 19px 2px 9px; }
 .detail-list-head p { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
 .detail-list { display: grid; gap: 8px; }
@@ -330,7 +334,7 @@ dialog::backdrop { background: rgba(18, 33, 61, .58); backdrop-filter: blur(3px)
   .management-card button { grid-column: 1 / -1; }
   .children-settings .panel-heading { align-items: stretch; flex-direction: column; }
   .add-child-settings-button { width: 100%; }
-  .family-agenda .filter-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .filter-row, .family-agenda .filter-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .preset-avatar-grid { grid-template-columns: 1fr; }
 }
 

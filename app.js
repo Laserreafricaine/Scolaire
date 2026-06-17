@@ -305,6 +305,7 @@ function renderHome() {
         <span class="child-info"><strong>${escapeHTML(child.name)}</strong><small>${escapeHTML(child.className)} · ${escapeHTML(child.school)}</small><span class="child-teacher">${escapeHTML(child.teacher || "Enseignant non renseigné")}</span></span>
         <span class="child-summary"><b>${upcoming.length}</b> élément${upcoming.length > 1 ? "s" : ""} à venir<span>${next ? `Prochain : ${escapeHTML(itemTitle(next))} · ${formatDate(next.date)}` : "Rien de prévu"}</span></span>
         ${alert ? `<span class="child-alert">${escapeHTML(getAlert(alert).text)} · ${escapeHTML(itemTitle(alert))}</span>` : ""}
+        ${child.schoolPhone ? `<span class="child-school-phone">Tel. ecole : ${escapeHTML(child.schoolPhone)}</span>` : ""}
         <span class="enter-child-hint">Entrer dans son espace</span>
       </button>`;
     }).join("");
@@ -331,12 +332,18 @@ function updateChildrenDots() {
 function openChild(id) {
   state.childId = id;
   state.selectedDate = null;
+  showView("child");
+}
+
+function showChildHome(scrollTarget = "agenda") {
   $("#categorySection").hidden = true;
   $("#agendaSection").hidden = false;
   $("#schoolCards").hidden = false;
   $("#childCategoryZone").hidden = false;
   $("#agendaListSection").hidden = false;
   showView("child");
+  const target = scrollTarget === "list" ? $("#agendaListSection") : $("#agendaSection");
+  setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
 }
 
 function renderChild() {
@@ -348,6 +355,7 @@ function renderChild() {
   const upcoming = getUpcoming(child.id);
   $("#profileBanner").style.setProperty("--child", child.color);
   $("#profileBanner").innerHTML = `${avatarHTML(child)}<span><p class="eyebrow">Son espace scolaire</p><h2>${escapeHTML(child.name)}</h2><small>${escapeHTML(child.className)} · ${escapeHTML(child.school)}</small><small>${escapeHTML(child.teacher || "Enseignant non renseigné")}</small></span><span class="profile-count">${upcoming.length} à venir</span>`;
+  if (child.schoolPhone) $(".profile-count", $("#profileBanner")).previousElementSibling.insertAdjacentHTML("beforeend", `<small>Tel. ecole : ${escapeHTML(child.schoolPhone)}</small>`);
   $("#schoolCards").innerHTML = Object.entries(CATEGORIES).map(([key, category]) => {
     const items = childItems().filter(item => item.category === key && !isDone(item)).sort(sortItems);
     const next = items[0];
@@ -382,13 +390,7 @@ function showAgenda() {
     }
     state.childId = data.children[0].id;
   }
-  $("#categorySection").hidden = true;
-  $("#agendaSection").hidden = false;
-  $("#schoolCards").hidden = false;
-  $("#childCategoryZone").hidden = false;
-  $("#agendaListSection").hidden = false;
-  showView("child");
-  setTimeout(() => $("#agendaSection").scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  showChildHome("agenda");
 }
 
 function renderAgenda() {
@@ -501,7 +503,7 @@ function renderFamilyGantt(start, end) {
     return `<div class="gantt-row">
       <span class="gantt-label"><b>${escapeHTML(child?.name || "")}</b><small>${escapeHTML(itemTitle(item))}</small></span>
       ${days.map(date => `<button class="gantt-cell ${toISODate(date) === toISODate(new Date()) ? "today" : ""}" data-family-calendar-date="${toISODate(date)}" type="button"></button>`).join("")}
-      <button class="gantt-bar" data-family-gantt-item="${item.id}" style="--event:${category.color};left:${138 + dayIndex * 62 + 3}px;width:56px" type="button">${category.icon} ${escapeHTML(child?.name || "")}</button>
+      <button class="gantt-bar" data-family-gantt-item="${item.id}" style="--event:${category.color};--day-index:${dayIndex}" type="button">${category.icon} ${escapeHTML(child?.name || "")}</button>
     </div>`;
   }).join("") : `<div class="gantt-row"><span class="gantt-label">Aucun élément</span>${days.map(date => `<button class="gantt-cell" data-family-calendar-date="${toISODate(date)}" type="button"></button>`).join("")}</div>`;
   $("#familyCalendar").className = "calendar gantt-calendar";
@@ -521,7 +523,7 @@ function renderFamilyAgendaList(periodStart, periodEnd) {
   const startISO = toISODate(periodStart);
   const endISO = toISODate(periodEnd);
   const items = data.items
-    .filter(item => item.date && (state.familySelectedDate ? item.date === state.familySelectedDate : item.date >= startISO && item.date <= endISO))
+    .filter(item => item.date && item.date >= startISO && item.date <= endISO)
     .filter(item => state.familyFilter === "all" || item.category === state.familyFilter)
     .sort(sortItems);
   $("#familyAgendaCount").textContent = `${items.length} élément${items.length > 1 ? "s" : ""}`;
@@ -561,7 +563,7 @@ function renderGantt(start, end) {
     return `<div class="gantt-row">
       <span class="gantt-label">${escapeHTML(itemTitle(item))}</span>
       ${days.map(date => `<button class="gantt-cell ${toISODate(date) === toISODate(new Date()) ? "today" : ""}" data-calendar-date="${toISODate(date)}" type="button" aria-label="Ajouter le ${formatDate(date, { day: "numeric", month: "long" })}"></button>`).join("")}
-      <button class="gantt-bar" data-gantt-item="${item.id}" style="--event:${category.color};left:${138 + dayIndex * 62 + 3}px;width:56px" type="button" title="${escapeHTML(itemTitle(item))}">${category.icon} ${escapeHTML(itemTitle(item))}</button>
+      <button class="gantt-bar" data-gantt-item="${item.id}" style="--event:${category.color};--day-index:${dayIndex}" type="button" title="${escapeHTML(itemTitle(item))}">${category.icon} ${escapeHTML(itemTitle(item))}</button>
     </div>`;
   }).join("") : `<div class="gantt-row"><span class="gantt-label">Aucun élément</span>${days.map(date => `<button class="gantt-cell" data-calendar-date="${toISODate(date)}" type="button" aria-label="Ajouter le ${formatDate(date, { day: "numeric", month: "long" })}"></button>`).join("")}</div>`;
   $("#calendar").className = "calendar gantt-calendar";
@@ -581,11 +583,10 @@ function renderFilters() {
 }
 
 function renderAgendaList(periodStart, periodEnd) {
-  const selected = state.selectedDate;
   const startISO = toISODate(periodStart);
   const endISO = toISODate(periodEnd);
   const items = childItems()
-    .filter(item => item.date && (selected ? item.date === selected : item.date >= startISO && item.date <= endISO))
+    .filter(item => item.date && item.date >= startISO && item.date <= endISO)
     .filter(item => state.filter === "all" || item.category === state.filter)
     .sort(sortItems);
   $("#agendaCount").textContent = `${items.length} élément${items.length > 1 ? "s" : ""}`;
@@ -733,6 +734,7 @@ function syncDetailsFromStatus(item) {
 function saveItem(event) {
   event.preventDefault();
   if (!currentChild()) return;
+  if (!$("#itemForm").reportValidity()) return;
   const values = collectItemForm();
   const id = $("#editingItemId").value;
   if (id) {
@@ -744,9 +746,12 @@ function saveItem(event) {
     data.items.push({ id: uid("item"), ...values, createdAt: nowISO(), updatedAt: nowISO() });
     showToast("Élément ajouté.");
   }
-  saveData();
-  renderCategory();
+  if (!saveData()) return;
+  state.focusDate = values.date || state.focusDate;
+  state.selectedDate = null;
+  state.filter = "all";
   resetItemForm();
+  showChildHome("list");
 }
 
 function toggleItem(id) {
@@ -798,6 +803,7 @@ function openChildDialog(id = null) {
   $("#childName").value = child?.name || "";
   $("#childClass").value = child?.className || "";
   $("#childSchool").value = child?.school || "";
+  $("#childSchoolPhone").value = child?.schoolPhone || "";
   $("#childTeacher").value = child?.teacher || "";
   $("#childColor").value = child?.color || "#2457e6";
   state.pendingAvatar = child?.avatar || null;
@@ -853,6 +859,7 @@ function saveChild(event) {
     name: $("#childName").value.trim(),
     className: $("#childClass").value.trim(),
     school: $("#childSchool").value.trim(),
+    schoolPhone: $("#childSchoolPhone").value.trim(),
     teacher: $("#childTeacher").value.trim(),
     color: $("#childColor").value,
     avatar: state.pendingAvatar,
@@ -1160,16 +1167,10 @@ function bindEvents() {
   $("#topSettingsButton").addEventListener("click", () => showView("settings"));
   $("#addChildSettingsButton").addEventListener("click", () => openChildDialog());
   $("#backHomeButton").addEventListener("click", () => showView("home"));
-  $("#backAgendaButton").addEventListener("click", () => {
-    $("#categorySection").hidden = true;
-    $("#agendaSection").hidden = false;
-    $("#schoolCards").hidden = false;
-    $("#childCategoryZone").hidden = false;
-    $("#agendaListSection").hidden = false;
-    renderChild();
-  });
+  $("#backAgendaButton").addEventListener("click", () => showChildHome("agenda"));
   $("#agendaAddButton").addEventListener("click", openQuickAdd);
   $("#itemForm").addEventListener("submit", saveItem);
+  $("#cancelItemButton").addEventListener("click", () => showChildHome("agenda"));
   $("#deleteInFormButton").addEventListener("click", () => requestDeleteItem($("#editingItemId").value));
   $("#childForm").addEventListener("submit", saveChild);
   $("#cancelChildButton").addEventListener("click", closeChildDialog);

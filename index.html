@@ -103,7 +103,7 @@
       </section>
 
       <section class="panel category-detail" id="categorySection" hidden>
-        <button class="back-button" id="backAgendaButton" type="button">‹ Retour à l’Agenda</button>
+        <button class="back-button form-return-button" id="backAgendaButton" type="button">‹ Annuler et revenir à l’agenda de l’enfant</button>
         <div class="panel-heading">
           <div><p class="eyebrow" id="categoryEyebrow"></p><h2 id="categoryTitle"></h2></div>
           <span class="category-count" id="categoryCount"></span>
@@ -129,6 +129,7 @@
           <label class="field note-field"><span>Note</span><textarea id="itemNote" rows="3" placeholder="Information complémentaire"></textarea></label>
           <label class="field attachment-field"><span>Photo ou pièce jointe</span><input id="itemAttachment" type="file" accept="image/*,.pdf"><small id="attachmentStatus">Une image légère ou un PDF.</small></label>
           <div class="form-actions">
+            <button class="secondary-button" id="cancelItemButton" type="button">Annuler</button>
             <button class="danger-button" id="deleteInFormButton" type="button" hidden>Supprimer</button>
             <button class="primary-button" id="saveItemButton" type="submit">Enregistrer</button>
           </div>
@@ -173,6 +174,7 @@
       </div>
       <div class="choice-buttons class-choice-buttons" id="childClassChoices" aria-label="Classes proposées"></div>
       <label class="field"><span>Établissement *</span><input id="childSchool" required list="schoolsList"></label>
+      <label class="field"><span>Téléphone de l’école</span><input id="childSchoolPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Ex. 01 23 45 67 89"></label>
       <label class="field"><span>Enseignant ou professeur principal</span><input id="childTeacher" list="teachersList"></label>
       <label class="field"><span>Photo d’avatar</span><input id="childAvatar" type="file" accept="image/*"></label>
       <div class="form-actions">

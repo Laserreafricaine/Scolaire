@@ -235,6 +235,7 @@ h3 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.12; }
   background: var(--detail);
   color: white;
 }
+.child-stepper span.active { background: var(--child-step, var(--blue)); }
 .main-zone { border-color: color-mix(in srgb, var(--detail) 52%, white); background: color-mix(in srgb, var(--detail) 9%, white); }
 .date-zone { border-color: #f5bd3f; background: #fff5cf; }
 .date-zone .fields-grid { grid-template-columns: minmax(0, 1fr); width: 100%; max-width: 100%; margin-inline: auto; overflow: hidden; }
@@ -647,9 +648,8 @@ dialog::backdrop { background: rgba(18, 33, 61, .58); backdrop-filter: blur(3px)
 .bulk-preview-list b {
   color: var(--orange);
 }
-.child-summary-actions {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
+.child-summary-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.child-summary-actions.editing { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .child-summary-actions button {
   min-height: 48px;
   font-size: 13px;

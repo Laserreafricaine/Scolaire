@@ -158,6 +158,11 @@
     <form id="childForm" class="dialog-card">
       <input id="childId" type="hidden">
       <div class="dialog-heading"><div><p class="eyebrow">Profil scolaire</p><h2 id="childDialogTitle">Ajouter un enfant</h2></div><button class="dialog-close" id="cancelChildButton" type="button" aria-label="Annuler et fermer">×</button></div>
+      <div class="item-stepper child-stepper" id="childStepper" aria-label="Étapes du profil enfant">
+        <span class="active">1</span>
+        <span>2</span>
+        <span>3</span>
+      </div>
 
       <section class="form-zone child-zone cz-avatar">
         <div class="zone-heading"><span>1</span><div><h3>Avatar</h3><p>Choisissez une image ou importez une photo.</p></div></div>
@@ -185,7 +190,9 @@
 
       <div class="form-actions child-summary-actions">
         <button class="secondary-button" id="cancelChildFormButton" type="button">Annuler</button>
+        <button class="secondary-button" id="childBackStepButton" type="button" hidden>Retour</button>
         <button class="danger-button" id="deleteChildButton" type="button" hidden>Supprimer</button>
+        <button class="primary-button" id="childNextStepButton" type="button">Suivant</button>
         <button class="primary-button" id="saveChildButton" value="default">Enregistrer</button>
       </div>
     </form>

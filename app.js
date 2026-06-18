@@ -129,7 +129,8 @@ let state = {
   pendingAddDate: null,
   quickCategoryChosen: false,
   hubActionChosen: false,
-  itemFormStep: 1
+  itemFormStep: 1,
+  childFormStep: 1
 };
 
 function createDefaultData() {
@@ -1200,6 +1201,7 @@ function openChildDialog(id = null) {
   renderChildClassChoices();
   renderPresetAvatars();
   updateAvatarPreview();
+  setChildFormStep(1);
   openModal("#childDialog");
 }
 
@@ -1226,9 +1228,45 @@ function renderChildClassChoices() {
   }));
 }
 
+function setChildFormStep(step) {
+  state.childFormStep = Math.max(1, Math.min(3, step));
+  const isEditing = Boolean($("#childId").value);
+  const zones = [$(".cz-avatar", $("#childForm")), $(".cz-info", $("#childForm")), $(".cz-school", $("#childForm"))];
+  zones.forEach((zone, index) => { zone.hidden = index + 1 !== state.childFormStep; });
+  $("#cancelChildFormButton").hidden = state.childFormStep !== 1;
+  $("#childBackStepButton").hidden = state.childFormStep === 1;
+  $("#childNextStepButton").hidden = state.childFormStep === 3;
+  $("#saveChildButton").hidden = state.childFormStep !== 3;
+  $("#deleteChildButton").hidden = !(isEditing && state.childFormStep === 3);
+  $("#childForm").style.setProperty("--child-step", $("#childColor").value || "#2457e6");
+  $("#childForm .form-actions").classList.toggle("editing", isEditing && state.childFormStep === 3);
+  $$("#childStepper span").forEach((dot, index) => dot.classList.toggle("active", index < state.childFormStep));
+}
+
+function validateChildStep(step = state.childFormStep) {
+  const root = step === 1 ? $(".cz-avatar", $("#childForm")) : step === 2 ? $(".cz-info", $("#childForm")) : $(".cz-school", $("#childForm"));
+  const fields = $$("input, textarea, select", root).filter(input => input.willValidate);
+  const invalid = fields.find(input => !input.checkValidity());
+  if (invalid) {
+    invalid.reportValidity();
+    return false;
+  }
+  return true;
+}
+
+function nextChildStep() {
+  if (!validateChildStep()) return;
+  setChildFormStep(state.childFormStep + 1);
+}
+
+function previousChildStep() {
+  setChildFormStep(state.childFormStep - 1);
+}
+
 function closeChildDialog() {
   $("#childForm").reset();
   state.pendingAvatar = null;
+  setChildFormStep(1);
   safeCloseDialog($("#childDialog"));
 }
 
@@ -1237,11 +1275,16 @@ function updateAvatarPreview() {
   const color = $("#childColor").value;
   const preview = $("#avatarPreview");
   preview.style.setProperty("--child", color);
+  $("#childForm").style.setProperty("--child-step", color);
   preview.innerHTML = state.pendingAvatar ? `<img src="${state.pendingAvatar}" alt="">` : escapeHTML(initials(name));
 }
 
 function saveChild(event) {
   event.preventDefault();
+  if (state.childFormStep !== 3) {
+    nextChildStep();
+    return;
+  }
   if (!$("#childForm").reportValidity()) return;
   const id = $("#childId").value;
   const isFirstChild = !id && data.children.length === 0;
@@ -1904,6 +1947,8 @@ function bindEvents() {
   $("#supplyBulkForm").addEventListener("submit", saveSupplyBulk);
   $("#cancelChildButton").addEventListener("click", closeChildDialog);
   $("#cancelChildFormButton").addEventListener("click", closeChildDialog);
+  $("#childNextStepButton").addEventListener("click", nextChildStep);
+  $("#childBackStepButton").addEventListener("click", previousChildStep);
   $("#deleteChildButton").addEventListener("click", requestDeleteChild);
   $("#childName").addEventListener("input", updateAvatarPreview);
   $("#childClass").addEventListener("input", renderChildClassChoices);

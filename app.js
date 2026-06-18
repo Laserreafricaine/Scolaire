@@ -127,7 +127,9 @@ let state = {
   pendingAttachment: null,
   pendingAvatar: null,
   pendingAddDate: null,
-  quickCategoryChosen: false
+  quickCategoryChosen: false,
+  hubActionChosen: false,
+  itemFormStep: 1
 };
 
 function createDefaultData() {
@@ -891,6 +893,44 @@ function setReminderChoice(value) {
   $$("[data-reminder-choice]", $("#dateFields")).forEach(button => button.classList.toggle("active", button.dataset.reminderChoice === value));
 }
 
+function setItemFormStep(step) {
+  state.itemFormStep = Math.max(1, Math.min(3, step));
+  const isEditing = Boolean($("#editingItemId").value);
+  $(".main-zone", $("#itemForm")).hidden = state.itemFormStep !== 1;
+  $(".date-zone", $("#itemForm")).hidden = state.itemFormStep !== 2;
+  $("#moreFieldsPanel").hidden = state.itemFormStep !== 3 || !$("#extraFields").children.length;
+  $(".note-field", $("#itemForm")).hidden = state.itemFormStep !== 3;
+  $(".attachment-field", $("#itemForm")).hidden = state.itemFormStep !== 3;
+  $("#cancelItemButton").hidden = state.itemFormStep !== 1;
+  $("#itemBackStepButton").hidden = state.itemFormStep === 1;
+  $("#itemNextStepButton").hidden = state.itemFormStep === 3;
+  $("#saveItemButton").hidden = state.itemFormStep !== 3;
+  $("#deleteInFormButton").hidden = !(isEditing && state.itemFormStep === 3);
+  $("#itemFormActions").classList.toggle("editing", isEditing && state.itemFormStep === 3);
+  $$("#itemStepper span").forEach((dot, index) => dot.classList.toggle("active", index < state.itemFormStep));
+  $("#categorySection").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function validateItemStep(step = state.itemFormStep) {
+  const root = step === 1 ? $(".main-zone", $("#itemForm")) : step === 2 ? $(".date-zone", $("#itemForm")) : $("#itemForm");
+  const fields = $$("input, textarea, select", root).filter(input => input.willValidate);
+  const invalid = fields.find(input => !input.checkValidity());
+  if (invalid) {
+    invalid.reportValidity();
+    return false;
+  }
+  return true;
+}
+
+function nextItemStep() {
+  if (!validateItemStep()) return;
+  setItemFormStep(state.itemFormStep + 1);
+}
+
+function previousItemStep() {
+  setItemFormStep(state.itemFormStep - 1);
+}
+
 function fieldHTML(field) {
   const [key, label, type, required, placeholder, ref] = field;
   if (type === "checkbox") return `<label class="checkbox-field field full"><input data-item-field="${key}" type="checkbox"><span>${escapeHTML(label)}</span></label>`;
@@ -914,6 +954,7 @@ function resetItemForm() {
   if (dateField) dateField.value = state.selectedDate || state.focusDate;
   const reminderField = $('[data-item-field="reminder"]');
   if (reminderField) setReminderChoice(data.preferences.defaultReminder);
+  setItemFormStep(1);
 }
 
 function fillItemForm(item) {
@@ -932,7 +973,7 @@ function fillItemForm(item) {
   $("#saveItemButton").textContent = "Enregistrer les modifications";
   $("#attachmentStatus").textContent = item.attachment ? `Pièce jointe enregistrée : ${item.attachment.name}` : "Une image légère ou un PDF.";
   state.pendingAttachment = item.attachment || null;
-  $("#itemForm").scrollIntoView({ behavior: "smooth", block: "start" });
+  setItemFormStep(1);
 }
 
 function collectItemForm() {
@@ -972,6 +1013,10 @@ function syncDetailsFromStatus(item) {
 function saveItem(event) {
   event.preventDefault();
   if (!currentChild()) return;
+  if (state.itemFormStep !== 3) {
+    nextItemStep();
+    return;
+  }
   if (!$("#itemForm").reportValidity()) return;
   const values = collectItemForm();
   const id = $("#editingItemId").value;
@@ -1109,6 +1154,25 @@ function editCurrentChildFromSummary() {
   state.activeNav = "settings";
   showView("settings");
   runAfterDialogClose(() => openChildDialog(child.id));
+}
+
+function clearCurrentChildTasksFromSummary() {
+  const child = currentChild();
+  if (!child) return;
+  const count = data.items.filter(item => item.childId === child.id).length;
+  if (!count) return showToast("Aucune tâche pour cet enfant.");
+  closeChildSummary();
+  runAfterDialogClose(() => askConfirm(
+    `Supprimer les tâches de ${child.name} ?`,
+    `${count} tâche${count > 1 ? "s" : ""} seront supprimées. Le profil de l’enfant sera conservé.`,
+    () => {
+      data.items = data.items.filter(item => item.childId !== child.id);
+      saveData();
+      state.filter = "all";
+      refreshCurrentView();
+      showToast(`Tâches de ${child.name} supprimées.`);
+    }
+  ));
 }
 
 function renderChildrenManagement() {
@@ -1452,6 +1516,149 @@ function shiftFamilyPeriod(direction) {
   renderFamilyAgenda();
 }
 
+function hubActions(categoryKey) {
+  const category = CATEGORIES[categoryKey];
+  const addLabel = {
+    homework: "Ajouter un devoir",
+    tests: "Prévoir un contrôle",
+    trips: "Créer une sortie",
+    supplies: "Ajouter un article",
+    meetings: "Préparer un RDV",
+    documents: "Ajouter un document"
+  }[categoryKey] || `Ajouter ${category.short.toLowerCase()}`;
+  const actions = [{ key: "standard", label: addLabel, text: "Saisie courte avec les champs essentiels." }];
+  if (categoryKey === "supplies") {
+    actions.push(
+      { key: "bulkSupplies", label: "Coller une liste", text: "Idéal pour la liste de rentrée par matière." },
+      { key: "showSupplies", label: "Voir à acheter", text: "Afficher les fournitures dans la liste de l’enfant." }
+    );
+  }
+  if (categoryKey === "tests") actions.push({ key: "standard", label: "Ajouter une note", text: "Compléter un contrôle avec note, barème ou commentaire." });
+  if (categoryKey === "trips") actions.push({ key: "standard", label: "Checklist sortie", text: "Autorisation, paiement, pique-nique et matériel." });
+  if (categoryKey === "meetings") actions.push({ key: "standard", label: "Compte rendu", text: "Questions, notes et actions après rendez-vous." });
+  if (categoryKey === "documents") actions.push({ key: "standard", label: "Signer ou remettre", text: "Suivre signature, remise et échéance." });
+  return actions;
+}
+
+function openHubActions(categoryKey) {
+  state.category = categoryKey;
+  state.hubActionChosen = false;
+  const category = CATEGORIES[categoryKey];
+  $("#hubActionEyebrow").textContent = category.label;
+  $("#hubActionTitle").textContent = "Que voulez-vous faire ?";
+  $("#hubActionText").textContent = "Choisissez une action courte. Les détails restent disponibles ensuite si besoin.";
+  $("#hubActionGrid").innerHTML = hubActions(categoryKey).map(action => `
+    <button class="hub-action" data-hub-action="${action.key}" type="button" style="--category:${category.color}">
+      <strong>${escapeHTML(action.label)}</strong><small>${escapeHTML(action.text)}</small>
+    </button>
+  `).join("");
+  $$("[data-hub-action]", $("#hubActionGrid")).forEach(button => button.addEventListener("click", () => handleHubAction(button.dataset.hubAction)));
+  openModal("#hubActionDialog");
+}
+
+function handleHubAction(action) {
+  if (state.hubActionChosen) return;
+  state.hubActionChosen = true;
+  const category = state.category;
+  safeCloseDialog($("#hubActionDialog"));
+  if (action === "bulkSupplies") {
+    runAfterDialogClose(openSupplyBulkDialog);
+    return;
+  }
+  if (action === "showSupplies") {
+    runAfterDialogClose(() => {
+      state.filter = "supplies";
+      showChildHome("list");
+      showToast("Fournitures affichées.");
+    });
+    return;
+  }
+  runAfterDialogClose(() => openCategory(category));
+}
+
+function cleanSupplyLine(line) {
+  return line
+    .replace(/^[\s•\-–—*✓☐]+/, "")
+    .replace(/^\d+[.)]\s+/, "")
+    .trim();
+}
+
+function parseSupplyBulkText(text) {
+  let currentUse = "Autres";
+  const items = [];
+  text.split(/\r?\n/).forEach(rawLine => {
+    const line = cleanSupplyLine(rawLine);
+    if (!line) return;
+    const split = line.match(/^(.{2,45}?)\s*[:：]\s*(.*)$/);
+    if (split) {
+      currentUse = split[1].trim();
+      const article = cleanSupplyLine(split[2] || "");
+      if (article) items.push({ article, use: currentUse });
+      return;
+    }
+    items.push({ article: line, use: currentUse });
+  });
+  return items;
+}
+
+function updateSupplyBulkPreview() {
+  const items = parseSupplyBulkText($("#supplyBulkText").value);
+  $("#supplyBulkSaveButton").disabled = !items.length;
+  $("#supplyBulkPreview").innerHTML = items.length ? `
+    <strong>${items.length} article${items.length > 1 ? "s" : ""} détecté${items.length > 1 ? "s" : ""}</strong>
+    <div class="bulk-preview-list">${items.slice(0, 24).map(item => `<span><b>${escapeHTML(item.use)}</b>${escapeHTML(item.article)}</span>`).join("")}</div>
+    ${items.length > 24 ? `<small>+ ${items.length - 24} autre${items.length - 24 > 1 ? "s" : ""} article${items.length - 24 > 1 ? "s" : ""}</small>` : ""}
+  ` : `<strong>Aperçu</strong><small>Collez une liste pour voir les articles détectés.</small>`;
+}
+
+function openSupplyBulkDialog() {
+  if (!currentChild()) return;
+  $("#supplyBulkForm").reset();
+  $("#supplyBulkDate").value = state.selectedDate || state.focusDate;
+  updateSupplyBulkPreview();
+  openModal("#supplyBulkDialog");
+}
+
+function saveSupplyBulk(event) {
+  event.preventDefault();
+  if (!$("#supplyBulkForm").reportValidity()) return;
+  const date = $("#supplyBulkDate").value;
+  const items = parseSupplyBulkText($("#supplyBulkText").value);
+  if (!items.length) return showToast("Collez au moins une fourniture.");
+  const createdAt = nowISO();
+  items.forEach(entry => {
+    addRefValue("subjects", entry.use);
+    data.items.push({
+      id: uid("item"),
+      childId: state.childId,
+      category: "supplies",
+      title: entry.article,
+      date,
+      time: "",
+      status: "todo",
+      reminder: data.preferences.defaultReminder,
+      note: "",
+      attachment: null,
+      details: { article: entry.article, use: entry.use, quantity: "", purchased: false, cost: "", store: "" },
+      createdAt,
+      updatedAt: createdAt
+    });
+  });
+  if (!saveData()) return;
+  safeCloseDialog($("#supplyBulkDialog"));
+  renderDatalists();
+  state.focusDate = date || state.focusDate;
+  state.selectedDate = null;
+  state.filter = "supplies";
+  if (guide.active && guide.awaiting === "item") {
+    guide.awaiting = null;
+    guide.show();
+    return;
+  }
+  showChildHome("list");
+  showToast(`${items.length} fourniture${items.length > 1 ? "s" : ""} ajoutée${items.length > 1 ? "s" : ""}.`);
+}
+
 function openQuickAdd() {
   state.quickCategoryChosen = false;
   $("#quickCategoryGrid").innerHTML = Object.entries(CATEGORIES).map(([key, category]) => `<button class="quick-category" type="button" style="--category:${category.color}" data-quick-category="${key}">${category.icon}<br>${category.label}</button>`).join("");
@@ -1460,7 +1667,10 @@ function openQuickAdd() {
     const category = button.dataset.quickCategory;
     state.quickCategoryChosen = true;
     safeCloseDialog($("#quickAddDialog"));
-    runAfterDialogClose(() => openCategory(category));
+    runAfterDialogClose(() => {
+      if (category === "supplies") openHubActions(category);
+      else openCategory(category);
+    });
   }));
   openModal("#quickAddDialog");
 }
@@ -1646,6 +1856,8 @@ function bindEvents() {
   $("#backAgendaButton").addEventListener("click", cancelItemForm);
   $("#agendaAddButton").addEventListener("click", openQuickAdd);
   $("#itemForm").addEventListener("submit", saveItem);
+  $("#itemNextStepButton").addEventListener("click", nextItemStep);
+  $("#itemBackStepButton").addEventListener("click", previousItemStep);
   $("#cancelItemButton").addEventListener("click", cancelItemForm);
   $("#deleteInFormButton").addEventListener("click", () => requestDeleteItem($("#editingItemId").value));
   $("#summaryBackButton").addEventListener("click", closeItemSummary);
@@ -1666,6 +1878,7 @@ function bindEvents() {
   $("#childSummaryBackButton").addEventListener("click", closeChildSummary);
   $("#childSummaryCloseButton").addEventListener("click", closeChildSummary);
   $("#childSummaryEditButton").addEventListener("click", editCurrentChildFromSummary);
+  $("#childSummaryClearTasksButton").addEventListener("click", clearCurrentChildTasksFromSummary);
   $("#childForm").addEventListener("submit", saveChild);
   $("#childDialog").addEventListener("close", () => { if (guide.active && guide.awaiting === "child") guide.stop(); });
   $("#quickAddDialog").addEventListener("close", () => {
@@ -1675,8 +1888,20 @@ function bindEvents() {
       guide.next();
     }
   });
+  $("#hubActionDialog").addEventListener("close", () => {
+    if (guide.active && guide.awaiting === "item" && !state.hubActionChosen) {
+      guide.awaiting = null;
+      showChildHome("agenda");
+      guide.next();
+    }
+  });
   $("#guideNext").addEventListener("click", () => guide.next());
   $("#guideSkip").addEventListener("click", () => guide.skip());
+  $("#hubActionCloseButton").addEventListener("click", () => safeCloseDialog($("#hubActionDialog")));
+  $("#supplyBulkCloseButton").addEventListener("click", () => safeCloseDialog($("#supplyBulkDialog")));
+  $("#supplyBulkCancelButton").addEventListener("click", () => safeCloseDialog($("#supplyBulkDialog")));
+  $("#supplyBulkText").addEventListener("input", updateSupplyBulkPreview);
+  $("#supplyBulkForm").addEventListener("submit", saveSupplyBulk);
   $("#cancelChildButton").addEventListener("click", closeChildDialog);
   $("#cancelChildFormButton").addEventListener("click", closeChildDialog);
   $("#deleteChildButton").addEventListener("click", requestDeleteChild);

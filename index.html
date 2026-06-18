@@ -99,6 +99,11 @@
         </div>
         <form id="itemForm">
           <input id="editingItemId" type="hidden">
+          <div class="item-stepper" id="itemStepper" aria-label="Étapes du formulaire">
+            <span class="active">1</span>
+            <span>2</span>
+            <span>3</span>
+          </div>
           <section class="form-zone main-zone">
             <div class="zone-heading"><span>1</span><div><h3>Décrire l’élément</h3><p>Les champs essentiels sont affichés en premier.</p></div></div>
             <div class="fields-grid" id="mainFields"></div>
@@ -113,8 +118,10 @@
           </details>
           <label class="field note-field"><span>Note</span><textarea id="itemNote" rows="3" placeholder="Information complémentaire"></textarea></label>
           <label class="field attachment-field"><span>Photo ou pièce jointe</span><input id="itemAttachment" type="file" accept="image/*,.pdf"><small id="attachmentStatus">Une image légère ou un PDF.</small></label>
-          <div class="form-actions">
+          <div class="form-actions" id="itemFormActions">
             <button class="secondary-button" id="cancelItemButton" type="button">Annuler</button>
+            <button class="secondary-button" id="itemBackStepButton" type="button" hidden>Retour</button>
+            <button class="primary-button" id="itemNextStepButton" type="button">Suivant</button>
             <button class="danger-button" id="deleteInFormButton" type="button" hidden>Supprimer</button>
             <button class="primary-button" id="saveItemButton" type="submit">Enregistrer</button>
           </div>
@@ -176,7 +183,7 @@
         <label class="field"><span>Enseignant ou professeur principal</span><input id="childTeacher" list="teachersList"></label>
       </section>
 
-      <div class="form-actions">
+      <div class="form-actions child-summary-actions">
         <button class="secondary-button" id="cancelChildFormButton" type="button">Annuler</button>
         <button class="danger-button" id="deleteChildButton" type="button" hidden>Supprimer</button>
         <button class="primary-button" id="saveChildButton" value="default">Enregistrer</button>
@@ -199,6 +206,27 @@
     <form method="dialog" class="dialog-card compact-dialog">
       <div class="dialog-heading"><div><p class="eyebrow">Nouvelle tâche</p><h2>Choisir la catégorie de tâche</h2></div><button class="dialog-close" value="cancel" aria-label="Fermer">×</button></div>
       <div class="quick-category-grid" id="quickCategoryGrid"></div>
+    </form>
+  </dialog>
+
+  <dialog id="hubActionDialog">
+    <form method="dialog" class="dialog-card compact-dialog">
+      <div class="dialog-heading"><div><p class="eyebrow" id="hubActionEyebrow">Action</p><h2 id="hubActionTitle">Que voulez-vous faire ?</h2></div><button class="dialog-close" id="hubActionCloseButton" type="button" aria-label="Fermer">×</button></div>
+      <p class="settings-help" id="hubActionText"></p>
+      <div class="hub-action-grid" id="hubActionGrid"></div>
+    </form>
+  </dialog>
+
+  <dialog id="supplyBulkDialog">
+    <form id="supplyBulkForm" class="dialog-card compact-dialog">
+      <div class="dialog-heading"><div><p class="eyebrow">Fournitures</p><h2>Coller une liste</h2></div><button class="dialog-close" id="supplyBulkCloseButton" type="button" aria-label="Fermer">×</button></div>
+      <label class="field"><span>Date nécessaire *</span><input id="supplyBulkDate" type="date" required></label>
+      <label class="field"><span>Liste par matière</span><textarea id="supplyBulkText" rows="7" placeholder="Maths :&#10;2 cahiers grands carreaux&#10;1 compas&#10;&#10;Français :&#10;1 classeur"></textarea></label>
+      <div class="bulk-preview" id="supplyBulkPreview"><strong>Aperçu</strong><small>Collez une liste pour voir les articles détectés.</small></div>
+      <div class="form-actions">
+        <button class="secondary-button" id="supplyBulkCancelButton" type="button">Annuler</button>
+        <button class="primary-button" id="supplyBulkSaveButton" type="submit">Enregistrer la liste</button>
+      </div>
     </form>
   </dialog>
 
@@ -226,9 +254,10 @@
       </div>
       <div class="summary-main child-summary-main" id="childSummaryMain"></div>
       <div class="summary-details" id="childSummaryDetails"></div>
-      <div class="form-actions">
+      <div class="form-actions child-summary-actions">
         <button class="secondary-button" id="childSummaryBackButton" type="button">Retour</button>
         <button class="primary-button" id="childSummaryEditButton" type="button">Modifier</button>
+        <button class="danger-button" id="childSummaryClearTasksButton" type="button">Supprimer ses tâches</button>
       </div>
     </form>
   </dialog>
